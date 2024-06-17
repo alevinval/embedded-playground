@@ -190,6 +190,7 @@ fn main() -> ! {
         alarm.set_low();
 
         let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
+        delay.delay_millis(1000);
         rtc.sleep_deep(&[&timer], &mut delay);
     }
 }
