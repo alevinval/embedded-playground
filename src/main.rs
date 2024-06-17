@@ -16,8 +16,8 @@ use bleps::{
     ad_structure::{
         create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE,
     },
-    attribute_server::{AttributeServer, NotificationData, WorkResult},
-    gatt, Addr, Ble, HciConnector,
+    attribute_server::AttributeServer,
+    gatt, Ble, HciConnector,
 };
 use esp_backtrace as _;
 use esp_hal::{
@@ -174,11 +174,7 @@ fn main() -> ! {
         },]);
 
         let mut rng = bleps::no_rng::NoRng;
-        let mut srv = AttributeServer::new(
-            &mut ble,
-            &mut gatt_attributes,
-            &mut rng,
-        );
+        let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
 
         for _ in 0..12 {
             srv.do_work().unwrap();
