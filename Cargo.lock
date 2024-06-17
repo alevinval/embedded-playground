@@ -218,29 +218,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "embassy-executor"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec648daedd2143466eff4b3e8002024f9f6c1de4ab7666bb679688752624c925"
-dependencies = [
- "critical-section",
- "document-features",
- "embassy-executor-macros",
-]
-
-[[package]]
-name = "embassy-executor-macros"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad454accf80050e9cf7a51e994132ba0e56286b31f9317b68703897c328c59b5"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.66",
-]
-
-[[package]]
 name = "embassy-time-driver"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -421,7 +398,6 @@ dependencies = [
  "cfg-if",
  "critical-section",
  "document-features",
- "embassy-executor",
  "embassy-time-driver",
  "esp-build 0.1.0",
  "esp-hal",
@@ -838,7 +814,6 @@ dependencies = [
  "bleps",
  "esp-backtrace",
  "esp-hal",
- "esp-hal-embassy",
  "esp-println",
  "esp-wifi",
  "format_no_std",
@@ -1017,9 +992,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "semihosting"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7f8592b424e48e4d0d59faf9fb126077542b3f5ceb0fa6468229619d98743df"
+checksum = "92bc56e056d8725553408cc2dfdfb96591c49ef2835d2f6060f28396d645d785"
 
 [[package]]
 name = "serde"
