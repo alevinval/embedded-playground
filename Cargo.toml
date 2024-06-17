@@ -1,36 +1,6 @@
-[package]
-name = "plantastic"
-version = "0.1.0"
-authors = ["Alexandre Vinyals<alevinval@proton.me>"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
+[workspace]
+resolver = "2"
 
-[dependencies]
-esp-backtrace = { version = "0.12.0", features = [
-    "esp32s3",
-    "exception-handler",
-    "panic-handler",
-    "println",
-] }
-esp-println = { version = "0.9.1", features = ["esp32s3", "log" ] }
-esp-hal = { path = "../esp-hal/esp-hal", features = ["esp32s3"] }
-esp-wifi = { path = "../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
-
-log = "0.4.21"
-fugit = "0.3.7"
-format_no_std = "1.2.0"
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = ["macros", "async"] }
-
-[profile.dev]
-# Rust debug is too slow.
-# For debug builds always builds with some optimization
-opt-level = 3
-
-[profile.release]
-codegen-units = 1 # LLVM can perform better optimizations using a single thread
-debug = 2
-debug-assertions = false
-incremental = false
-lto = 'fat'
-opt-level = 3
-overflow-checks = false
+members = [
+    "humidity",
+]

@@ -1,2 +1,2 @@
 fmt:
-	cargo +nightly  fmt
+	cargo +nightly fmt
