@@ -20,6 +20,7 @@ use bleps::{
     gatt, Ble, HciConnector,
 };
 use esp_backtrace as _;
+use esp_println as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalLine, AdcChannel, AdcConfig, AdcPin, Attenuation},
     clock::ClockControl,
@@ -39,7 +40,7 @@ use fugit::{MicrosDurationU32, MicrosDurationU64};
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 
 const HYGROMETER_WARMUP: u32 = MicrosDurationU32::millis(100).to_millis();
-const HYGROMETER_SAMPLES: u8 = 10;
+const HYGROMETER_SAMPLES: u8 = 64;
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
@@ -92,7 +93,7 @@ fn main() -> ! {
     type Cal = esp_hal::analog::adc::AdcCalLine<ADC1>;
     let mut hygrometer_adc_config = AdcConfig::new();
     let mut hygrometer_adc1_pin = hygrometer_adc_config
-        .enable_pin_with_cal::<_, Cal>(hygrometer_pin, Attenuation::Attenuation0dB);
+        .enable_pin_with_cal::<_, Cal>(hygrometer_pin, Attenuation::Attenuation11dB);
     let mut hygrometer_adc1 = Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
@@ -123,7 +124,7 @@ fn main() -> ! {
 
     let mut buf = [0u8; 256];
     let results = format_no_std::show(&mut buf, format_args!("{avg},{min},{max}")).unwrap();
-    log::info!("results: '{results}'");
+    println!("results: '{results}'");
 
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
     delay.delay_millis(1000);
