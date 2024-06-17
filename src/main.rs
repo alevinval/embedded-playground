@@ -20,12 +20,11 @@ use bleps::{
     gatt, Ble, HciConnector,
 };
 use esp_backtrace as _;
-use esp_println as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalLine, AdcChannel, AdcConfig, AdcPin, Attenuation},
     clock::ClockControl,
     delay::Delay,
-    gpio::{AnalogPin, AnyOutput, Io, Level, Output},
+    gpio::{AnalogPin, DriveStrength, GpioPin, Io, Level, Output},
     peripherals::*,
     prelude::*,
     rng::Rng,
@@ -33,6 +32,7 @@ use esp_hal::{
     system::SystemControl,
     timer::timg::TimerGroup,
 };
+use esp_println as _;
 use esp_println::println;
 use esp_wifi::{ble::controller::BleConnector, initialize, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
@@ -44,7 +44,7 @@ const HYGROMETER_SAMPLES: u8 = 64;
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
-    enable_sensor: &mut AnyOutput,
+    enable_sensor: &mut Output<GpioPin<5>>,
     adc1: &mut Adc<ADC1>,
     adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
 ) -> (f32, u16, u16) {
@@ -78,16 +78,12 @@ fn main() -> ! {
     let mut rtc = Rtc::new(peripherals.LPWR, None);
     let mut delay = Delay::new(&clocks);
 
-    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
-    let mut wdt0 = timg0.wdt;
-    wdt0.enable();
-    wdt0.set_timeout(900000u64.secs());
-
     // Pin definitions
     let hygrometer_diode_pin = io.pins.gpio5;
-    let mut hygrometer_diode = AnyOutput::new(hygrometer_diode_pin, Level::Low);
+    let mut hygrometer_enable = Output::new(hygrometer_diode_pin, Level::Low);
+    hygrometer_enable.set_drive_strength(DriveStrength::I5mA);
     let mut alarm = Output::new(io.pins.gpio7, Level::Low);
-    alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I40mA);
+    alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I5mA);
 
     let hygrometer_pin = io.pins.gpio6;
     type Cal = esp_hal::analog::adc::AdcCalLine<ADC1>;
@@ -103,12 +99,8 @@ fn main() -> ! {
         alarm.set_low();
         delay.delay_millis(150);
     }
-    let (avg, min, max) = get_samples(
-        &delay,
-        &mut hygrometer_diode,
-        &mut hygrometer_adc1,
-        &mut hygrometer_adc1_pin,
-    );
+    let (avg, min, max) =
+        get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
     let beeps = match avg as u32 {
         0..=650 => 1,
         651..=800 => 2,
