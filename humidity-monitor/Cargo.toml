@@ -1,11 +1,14 @@
 [package]
 name = "humidity"
 version = "0.1.0"
-authors = ["Alexandre Vinyals<alevinval@proton.me>"]
 edition = "2021"
-license = "MIT OR Apache-2.0"
 
 [dependencies]
+toolbox = { path = "../toolbox" }
+log = "0.4.21"
+fugit = "0.3.7"
+bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = ["macros", "async"] }
+
 esp-backtrace = { version = "0.12.0", features = [
     "esp32s3",
     "exception-handler",
@@ -15,11 +18,6 @@ esp-backtrace = { version = "0.12.0", features = [
 esp-println = { version = "0.9.1", features = ["esp32s3", "log" ] }
 esp-hal = { path = "../../esp-hal/esp-hal", features = ["esp32s3"] }
 esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
-
-log = "0.4.21"
-fugit = "0.3.7"
-format_no_std = "1.2.0"
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = ["macros", "async"] }
 
 [profile.dev]
 # Rust debug is too slow.

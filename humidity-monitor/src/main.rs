@@ -23,15 +23,29 @@ use esp_hal::{
     system::SystemControl,
     timer::timg::TimerGroup,
 };
-use esp_println as _;
 use esp_println::println;
-use esp_wifi::{ble::controller::BleConnector, initialize, EspWifiInitFor};
+use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
+use toolbox::format;
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
-
 const HYGROMETER_WARMUP: u32 = MicrosDurationU32::millis(100).to_millis();
 const HYGROMETER_SAMPLES: u8 = 64;
+
+macro_rules! pulse {
+    ($output:ident, $delay:ident, $ms:expr) => {{
+        $output.set_high();
+        $delay.delay_millis($ms);
+        $output.set_low();
+    }};
+}
+
+macro_rules! delayed_pulse {
+    ($output:ident, $delay:ident, $ms:expr, $delay_ms:expr) => {{
+        $delay.delay_millis($ms);
+        pulse!($output, $delay, $ms);
+    }};
+}
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
@@ -85,33 +99,30 @@ fn main() -> ! {
     //
 
     for _ in 0..5 {
-        alarm.set_high();
-        delay.delay_millis(10);
-        alarm.set_low();
-        delay.delay_millis(150);
+        delayed_pulse!(alarm, delay, 10, 25);
+        delayed_pulse!(alarm, delay, 10, 100);
     }
+
     let (avg, min, max) =
         get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
+
     let beeps = match avg as u32 {
         0..=650 => 1,
         651..=800 => 2,
         801..=1100 => 3,
         _ => 10,
     };
+
     for _ in 0..beeps {
-        alarm.set_high();
-        delay.delay_millis(10);
-        alarm.set_low();
-        delay.delay_millis(50);
+        delayed_pulse!(alarm, delay, 10, 150);
     }
 
     let mut buf = [0u8; 256];
-    let results = format_no_std::show(&mut buf, format_args!("{avg},{min},{max}")).unwrap();
+    let results = format!(buf, "{avg},{min},{max}");
     println!("results: '{results}'");
 
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
-    delay.delay_millis(1000);
-    let init = initialize(
+    let init = esp_wifi::initialize(
         EspWifiInitFor::Ble,
         timer,
         Rng::new(peripherals.RNG),
@@ -165,12 +176,9 @@ fn main() -> ! {
             delay.delay_millis(1000);
         }
 
-        alarm.set_high();
-        delay.delay_millis(500);
-        alarm.set_low();
+        pulse!(alarm, delay, 100);
 
         let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
-        delay.delay_millis(1000);
         rtc.sleep_deep(&[&timer], &mut delay);
     }
 }
