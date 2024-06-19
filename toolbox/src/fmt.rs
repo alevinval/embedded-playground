@@ -3,7 +3,7 @@ use core::{cmp, fmt, str::from_utf8};
 #[macro_export]
 macro_rules! format {
     ($buf:expr, $($format_args:tt)*) => {{
-        use toolbox::fmt::FmtWriter;
+        use $crate::fmt::FmtWriter;
         use core::fmt;
         let mut writer = FmtWriter::new(&mut $buf);
         fmt::write(&mut writer, format_args!($($format_args)*)).unwrap();

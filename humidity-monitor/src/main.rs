@@ -8,7 +8,9 @@ use bleps::{
         create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE,
     },
     attribute_server::AttributeServer,
-    gatt, Ble, HciConnector,
+    gatt,
+    no_rng::NoRng,
+    Ble, HciConnector,
 };
 use esp_backtrace as _;
 use esp_hal::{
@@ -42,7 +44,7 @@ macro_rules! pulse {
 
 macro_rules! delayed_pulse {
     ($output:ident, $delay:ident, $ms:expr, $delay_ms:expr) => {{
-        $delay.delay_millis($ms);
+        $delay.delay_millis($delay_ms);
         pulse!($output, $delay, $ms);
     }};
 }
@@ -91,16 +93,15 @@ fn main() -> ! {
     alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I5mA);
 
     let hygrometer_pin = io.pins.gpio6;
-    type Cal = esp_hal::analog::adc::AdcCalLine<ADC1>;
     let mut hygrometer_adc_config = AdcConfig::new();
     let mut hygrometer_adc1_pin = hygrometer_adc_config
-        .enable_pin_with_cal::<_, Cal>(hygrometer_pin, Attenuation::Attenuation11dB);
+        .enable_pin_with_cal::<_, AdcCalLine<ADC1>>(hygrometer_pin, Attenuation::Attenuation11dB);
     let mut hygrometer_adc1 = Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
     for _ in 0..5 {
+        delayed_pulse!(alarm, delay, 10, 15);
         delayed_pulse!(alarm, delay, 10, 25);
-        delayed_pulse!(alarm, delay, 10, 100);
     }
 
     let (avg, min, max) =
@@ -168,7 +169,7 @@ fn main() -> ! {
             },],
         },]);
 
-        let mut rng = bleps::no_rng::NoRng;
+        let mut rng = NoRng;
         let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
 
         for _ in 0..12 {

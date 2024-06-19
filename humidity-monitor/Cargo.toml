@@ -9,13 +9,13 @@ log = "0.4.21"
 fugit = "0.3.7"
 bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = ["macros", "async"] }
 
-esp-backtrace = { version = "0.12.0", features = [
+esp-backtrace = { path = "../../esp-hal/esp-backtrace", features = [
     "esp32s3",
     "exception-handler",
     "panic-handler",
     "println",
 ] }
-esp-println = { version = "0.9.1", features = ["esp32s3", "log" ] }
+esp-println = { path = "../../esp-hal/esp-println", features = ["esp32s3", "log" ] }
 esp-hal = { path = "../../esp-hal/esp-hal", features = ["esp32s3"] }
 esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
 
