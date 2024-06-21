@@ -356,6 +356,7 @@ dependencies = [
  "document-features",
  "embedded-can",
  "embedded-dma",
+ "embedded-hal 0.2.7",
  "embedded-hal 1.0.0",
  "embedded-hal-nb",
  "enumset",
@@ -632,6 +633,7 @@ name = "humidity"
 version = "0.1.0"
 dependencies = [
  "bleps",
+ "embedded-hal 0.2.7",
  "esp-backtrace",
  "esp-hal",
  "esp-println",

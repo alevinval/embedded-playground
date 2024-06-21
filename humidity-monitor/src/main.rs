@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::time::Duration;
+use core::{convert::Infallible, time::Duration};
 
 use bleps::{
     ad_structure::{
@@ -17,7 +17,7 @@ use esp_hal::{
     analog::adc::{Adc, AdcCalLine, AdcChannel, AdcConfig, AdcPin, Attenuation},
     clock::ClockControl,
     delay::Delay,
-    gpio::{AnalogPin, DriveStrength, GpioPin, Io, Level, Output},
+    gpio::{AnalogPin, DriveStrength, Io, Level, Output},
     peripherals::*,
     prelude::*,
     rng::Rng,
@@ -52,7 +52,7 @@ macro_rules! delayed_pulse {
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
-    enable_sensor: &mut Output<GpioPin<5>>,
+    mut enable_sensor: impl embedded_hal::digital::v2::OutputPin<Error = Infallible>,
     adc1: &mut Adc<ADC1>,
     adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
 ) -> SampleResult {
@@ -60,7 +60,7 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
     let mut sample_min = u16::MAX;
     let mut sample_max = u16::MIN;
 
-    enable_sensor.set_high();
+    enable_sensor.set_high().unwrap();
     delay.delay_millis(HYGROMETER_WARMUP);
     for _ in 0..HYGROMETER_SAMPLES {
         let sample = adc1.read_blocking(adcpin);
@@ -68,7 +68,7 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
         sample_min = sample_min.min(sample);
         sample_sum += sample as u32;
     }
-    enable_sensor.set_low();
+    enable_sensor.set_low().unwrap();
 
     let sample_avg = (sample_sum as f32 / HYGROMETER_SAMPLES as f32) as u16;
     SampleResult { avg: sample_avg, min: sample_min, max: sample_max }
@@ -106,7 +106,7 @@ fn main() -> ! {
     }
 
     let sample_result =
-        get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
+        get_samples(&delay, hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
 
     let beeps = match sample_result.avg {
         0..=650 => 1,

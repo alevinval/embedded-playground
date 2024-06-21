@@ -24,8 +24,12 @@ esp-println = { path = "../../esp-hal/esp-println", features = [
     "esp32s3",
     "log",
 ] }
-esp-hal = { path = "../../esp-hal/esp-hal", features = ["esp32s3"] }
+esp-hal = { path = "../../esp-hal/esp-hal", features = [
+    "esp32s3",
+    "embedded-hal-02",
+] }
 esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
+embedded-hal = "*"
 
 [profile.dev]
 # Rust debug is too slow.
