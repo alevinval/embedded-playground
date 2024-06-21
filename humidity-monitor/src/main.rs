@@ -28,6 +28,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
+use humidity_core::SampleResult;
 use toolbox::format;
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
@@ -54,7 +55,7 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
     enable_sensor: &mut Output<GpioPin<5>>,
     adc1: &mut Adc<ADC1>,
     adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
-) -> (f32, u16, u16) {
+) -> SampleResult {
     let mut sample_sum = 0 as u32;
     let mut sample_min = u16::MAX;
     let mut sample_max = u16::MIN;
@@ -69,8 +70,8 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
     }
     enable_sensor.set_low();
 
-    let sample_avg = sample_sum as f32 / HYGROMETER_SAMPLES as f32;
-    (sample_avg, sample_min, sample_max)
+    let sample_avg = (sample_sum as f32 / HYGROMETER_SAMPLES as f32) as u16;
+    SampleResult { avg: sample_avg, min: sample_min, max: sample_max }
 }
 
 #[entry]
@@ -104,10 +105,10 @@ fn main() -> ! {
         delayed_pulse!(alarm, delay, 10, 25);
     }
 
-    let (avg, min, max) =
+    let sample_result =
         get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
 
-    let beeps = match avg as u32 {
+    let beeps = match sample_result.avg {
         0..=650 => 1,
         651..=800 => 2,
         801..=1100 => 3,
@@ -119,7 +120,7 @@ fn main() -> ! {
     }
 
     let mut buf = [0u8; 256];
-    let results = format!(buf, "{avg},{min},{max}");
+    let results = format!(buf, "{},{},{}", sample_result.avg, sample_result.min, sample_result.max);
     println!("results: '{results}'");
 
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
