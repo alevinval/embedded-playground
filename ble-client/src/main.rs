@@ -3,7 +3,8 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use std::{error::Error, str::from_utf8, time::Duration};
+use humidity_core::sample;
+use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
     io::AsyncWriteExt,
@@ -51,14 +52,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let chars = esp32.characteristics();
             let cmd_humidity = chars.iter().find(|c| c.uuid == humidity).unwrap();
             let data = esp32.read(cmd_humidity).await.unwrap();
-            let data = from_utf8(&data).expect("unexpected non-utf8 data");
-            println!("characteristic value: {data:?}");
-            println!("total elapsed: {:?}", d.elapsed());
+
+            let mut de = sample::de::Deserializer::default();
+            let sample = de.deserialize(&data).unwrap();
+            println!("sample: {sample:?}");
+            println!("elapsed {:?}", d.elapsed());
 
             let mut open = OpenOptions::new();
             let mut output = open.write(true).append(true).open("data.csv").await?;
             let now = Local::now().format("%Y-%m-%d %H:%M:%s");
-            output.write_all(format!("{now},{data}\n").as_bytes()).await?;
+            output
+                .write_all(
+                    format!("{now},{},{},{}\n", sample.avg, sample.min, sample.max).as_bytes(),
+                )
+                .await?;
             sleep(Duration::from_secs(10)).await;
             continue;
         }

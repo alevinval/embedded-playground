@@ -28,7 +28,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
-use humidity_core::SampleResult;
+use humidity_core::sample::{self, SampleResult};
 use toolbox::format;
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
@@ -134,53 +134,50 @@ fn main() -> ! {
     .unwrap();
 
     let mut bluetooth = peripherals.BT;
+    let connector = BleConnector::new(&init, &mut bluetooth);
+    let hci = HciConnector::new(connector, esp_wifi::current_millis);
+    let mut ble = Ble::new(&hci);
 
-    loop {
-        let connector = BleConnector::new(&init, &mut bluetooth);
-        let hci = HciConnector::new(connector, esp_wifi::current_millis);
-        let mut ble = Ble::new(&hci);
+    println!("{:?}", ble.init());
+    println!("{:?}", ble.cmd_set_le_advertising_parameters());
+    println!(
+        "{:?}",
+        ble.cmd_set_le_advertising_data(
+            create_advertising_data(&[
+                AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
+                AdStructure::ServiceUuids16(&[Uuid::Uuid16(0x1809)]),
+                AdStructure::CompleteLocalName(esp_hal::chip!()),
+            ])
+            .unwrap()
+        )
+    );
+    println!("{:?}", ble.cmd_set_le_advertise_enable(true));
 
-        println!("{:?}", ble.init());
-        println!("{:?}", ble.cmd_set_le_advertising_parameters());
-        println!(
-            "{:?}",
-            ble.cmd_set_le_advertising_data(
-                create_advertising_data(&[
-                    AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
-                    AdStructure::ServiceUuids16(&[Uuid::Uuid16(0x1809)]),
-                    AdStructure::CompleteLocalName(esp_hal::chip!()),
-                ])
-                .unwrap()
-            )
-        );
-        println!("{:?}", ble.cmd_set_le_advertise_enable(true));
+    let mut rf = |_offset: usize, mut data: &mut [u8]| {
+        let mut ser = sample::ser::Serializer::default();
+        ser.serialize(&sample_result, &mut data).unwrap()
+    };
 
-        let mut rf = |_offset: usize, data: &mut [u8]| {
-            data[0..results.len()].copy_from_slice(results.as_bytes());
-            results.len()
-        };
+    gatt!([service {
+        uuid: "937312e0-2354-11eb-9f10-fbc30a62cf38",
+        characteristics: [characteristic {
+            name: "humidity",
+            uuid: "987312e0-2354-11eb-9f10-fbc30a62cf38",
+            notify: true,
+            read: rf,
+        },],
+    },]);
 
-        gatt!([service {
-            uuid: "937312e0-2354-11eb-9f10-fbc30a62cf38",
-            characteristics: [characteristic {
-                name: "humidity",
-                uuid: "987312e0-2354-11eb-9f10-fbc30a62cf38",
-                notify: true,
-                read: rf,
-            },],
-        },]);
+    let mut rng = NoRng;
+    let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
 
-        let mut rng = NoRng;
-        let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
-
-        for _ in 0..12 {
-            srv.do_work().unwrap();
-            delay.delay_millis(1000);
-        }
-
-        pulse!(alarm, delay, 100);
-
-        let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
-        rtc.sleep_deep(&[&timer], &mut delay);
+    for _ in 0..12 {
+        srv.do_work().unwrap();
+        delay.delay_millis(1000);
     }
+
+    pulse!(alarm, delay, 100);
+
+    let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
+    rtc.sleep_deep(&[&timer], &mut delay);
 }
