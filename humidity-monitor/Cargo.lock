@@ -637,9 +637,14 @@ dependencies = [
  "esp-println",
  "esp-wifi",
  "fugit",
+ "humidity-core",
  "log",
  "toolbox",
 ]
+
+[[package]]
+name = "humidity-core"
+version = "0.1.0"
 
 [[package]]
 name = "ident_case"

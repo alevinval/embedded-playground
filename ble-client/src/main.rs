@@ -1,13 +1,14 @@
-use btleplug::api::{self, Peripheral, ScanFilter};
-use btleplug::api::{Central, Manager as _};
-use btleplug::platform::{self, Adapter, Manager};
+use btleplug::{
+    api::{self, Central, Manager as _, Peripheral, ScanFilter},
+    platform::{self, Adapter, Manager},
+};
 use chrono::Local;
-use std::error::Error;
-use std::str::from_utf8;
-use std::time::Duration;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
-use tokio::time::{sleep, Instant};
+use std::{error::Error, str::from_utf8, time::Duration};
+use tokio::{
+    fs::OpenOptions,
+    io::AsyncWriteExt,
+    time::{sleep, Instant},
+};
 use uuid::Uuid;
 
 async fn get_central(manager: &Manager) -> Adapter {
@@ -36,10 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let humidity = Uuid::parse_str("987312e0-2354-11eb-9f10-fbc30a62cf38").unwrap();
     let manager = Manager::new().await?;
     let central = get_central(&manager).await;
-    central
-        .start_scan(ScanFilter::default())
-        .await
-        .expect("failed starting scan");
+    central.start_scan(ScanFilter::default()).await.expect("failed starting scan");
 
     loop {
         let device = find_esp32(&central).await;
@@ -60,9 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let mut open = OpenOptions::new();
             let mut output = open.write(true).append(true).open("data.csv").await?;
             let now = Local::now().format("%Y-%m-%d %H:%M:%s");
-            output
-                .write_all(format!("{now},{data}\n").as_bytes())
-                .await?;
+            output.write_all(format!("{now},{data}\n").as_bytes()).await?;
             sleep(Duration::from_secs(10)).await;
             continue;
         }

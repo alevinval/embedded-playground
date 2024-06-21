@@ -5,9 +5,14 @@ edition = "2021"
 
 [dependencies]
 toolbox = { path = "../toolbox" }
+humidity-core = { path = "../humidity-core" }
+
 log = "0.4.21"
 fugit = "0.3.7"
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = ["macros", "async"] }
+bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
+    "macros",
+    "async",
+] }
 
 esp-backtrace = { path = "../../esp-hal/esp-backtrace", features = [
     "esp32s3",
@@ -15,7 +20,10 @@ esp-backtrace = { path = "../../esp-hal/esp-backtrace", features = [
     "panic-handler",
     "println",
 ] }
-esp-println = { path = "../../esp-hal/esp-println", features = ["esp32s3", "log" ] }
+esp-println = { path = "../../esp-hal/esp-println", features = [
+    "esp32s3",
+    "log",
+] }
 esp-hal = { path = "../../esp-hal/esp-hal", features = ["esp32s3"] }
 esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
 
@@ -25,7 +33,7 @@ esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
 opt-level = 3
 
 [profile.release]
-codegen-units = 1 # LLVM can perform better optimizations using a single thread
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
 debug = 2
 debug-assertions = false
 incremental = false
