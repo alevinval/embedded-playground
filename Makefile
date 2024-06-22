@@ -11,3 +11,6 @@ check:
 	cd humidity-core && cargo check
 	cd humidity-monitor && cargo check
 	cd ble-client && cargo check
+
+run-client:
+	cargo run --manifest-path ./ble-client/Cargo.toml
