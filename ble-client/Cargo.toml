@@ -3,6 +3,7 @@ name = "ble-client"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
 btleplug = "0.11.5"
 chrono = "0.4.38"
@@ -10,3 +11,15 @@ futures = "0.3.30"
 tokio = { version = "1.38.0", features = ["full"] }
 uuid = "1.8.0"
 humidity-core = { path = "../humidity-core" }
+
+[profile.dev]
+incremental = false
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 3
+overflow-checks = false
