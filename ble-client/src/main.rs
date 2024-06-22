@@ -53,8 +53,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let cmd_humidity = chars.iter().find(|c| c.uuid == humidity).unwrap();
             let data = esp32.read(cmd_humidity).await.unwrap();
 
-            let mut de = sample::de::Deserializer::default();
-            let sample = de.deserialize(&data).unwrap();
+            let mut de = sample::Deserializer::new(&data);
+            let sample = de.deserialize().unwrap();
             println!("sample: {sample:?}");
             println!("elapsed {:?}", d.elapsed());
 

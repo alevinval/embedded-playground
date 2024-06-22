@@ -154,8 +154,8 @@ fn main() -> ! {
     println!("{:?}", ble.cmd_set_le_advertise_enable(true));
 
     let mut rf = |_offset: usize, mut data: &mut [u8]| {
-        let mut ser = sample::ser::Serializer::default();
-        ser.serialize(&sample_result, &mut data).unwrap()
+        let mut ser = sample::Serializer::new(&mut data);
+        ser.serialize(&sample_result).unwrap()
     };
 
     gatt!([service {

@@ -1,37 +1,34 @@
+use crate::serde;
+
 use super::SampleResult;
 
-#[derive(Debug, PartialEq)]
-pub enum SerializerError {
-    ErrBufferSmall,
+pub struct Serializer<'output> {
+    ser: serde::Serializer<'output>,
 }
 
-pub struct Serializer {
-    pos: usize,
+#[derive(Debug)]
+pub enum Error {
+    Error(serde::Error),
+    ErrUnexpectedDeviation,
 }
 
-impl Serializer {
-    pub fn serialize(
-        &mut self,
-        sample: &SampleResult,
-        out: &mut [u8],
-    ) -> Result<usize, SerializerError> {
-        if out.len() < 6 {
-            return Err(SerializerError::ErrBufferSmall);
+impl<'output> Serializer<'output> {
+    pub fn new(out: &'output mut [u8]) -> Self {
+        Self { ser: serde::Serializer::new(out) }
+    }
+
+    pub fn serialize(&mut self, sample: &SampleResult) -> Result<usize, Error> {
+        let mut n = self.ser.write_u16(sample.avg).map_err(Error::Error)?;
+
+        let max_delta = sample.max - sample.avg;
+        let min_delta = sample.avg - sample.min;
+
+        if max_delta > (u8::MAX as u16) || min_delta > u8::MAX as u16 {
+            return Err(Error::ErrUnexpectedDeviation);
         }
-        self.write_u16(sample.avg, out);
-        self.write_u16(sample.min, out);
-        self.write_u16(sample.max, out);
-        Ok(6)
-    }
 
-    fn write_u16(&mut self, value: u16, out: &mut [u8]) {
-        out[self.pos..self.pos + 2].copy_from_slice(&value.to_le_bytes());
-        self.pos += 2
-    }
-}
-
-impl Default for Serializer {
-    fn default() -> Self {
-        Self { pos: 0 }
+        n += self.ser.write_u8((sample.avg - sample.min) as u8).map_err(Error::Error)?;
+        n += self.ser.write_u8((sample.max - sample.avg) as u8).map_err(Error::Error)?;
+        Ok(n)
     }
 }

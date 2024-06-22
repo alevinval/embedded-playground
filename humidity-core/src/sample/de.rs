@@ -1,36 +1,20 @@
+use crate::serde;
+
 use super::SampleResult;
 
-pub struct Deserializer {
-    pos: usize,
+pub struct Deserializer<'input> {
+    de: serde::Deserializer<'input>,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum DeserializerError {
-    ErrBufferSmall,
-}
-
-impl Deserializer {
-    pub fn deserialize(&mut self, input: &[u8]) -> Result<SampleResult, DeserializerError> {
-        if input.len() < 6 {
-            return Err(DeserializerError::ErrBufferSmall);
-        }
-
-        let mut sample = SampleResult::default();
-        sample.avg = self.read_humidity(input);
-        sample.min = self.read_humidity(input);
-        sample.max = self.read_humidity(input);
-        Ok(sample)
+impl<'input> Deserializer<'input> {
+    pub fn new(input: &'input [u8]) -> Self {
+        Self { de: serde::Deserializer::new(input) }
     }
 
-    fn read_humidity(&mut self, input: &[u8]) -> u16 {
-        let bfr = &input[self.pos..self.pos + 2];
-        self.pos += 2;
-        u16::from_le_bytes([bfr[0], bfr[1]])
-    }
-}
-
-impl Default for Deserializer {
-    fn default() -> Self {
-        Self { pos: 0 }
+    pub fn deserialize(&mut self) -> Result<SampleResult, serde::Error> {
+        let avg = self.de.read_u16()?;
+        let min_delta = self.de.read_u8()? as u16;
+        let max_delta = self.de.read_u8()? as u16;
+        Ok(SampleResult { avg, min: avg - min_delta, max: avg + max_delta })
     }
 }
