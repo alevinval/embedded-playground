@@ -13,4 +13,4 @@ check:
 	cd ble-client && cargo check
 
 run-client:
-	cargo run --manifest-path ./ble-client/Cargo.toml
+	cargo run --manifest-path ./ble-client/Cargo.toml --release
