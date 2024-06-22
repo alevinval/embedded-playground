@@ -8,3 +8,7 @@ mod ser;
 pub enum Error {
     ErrBufferSmall,
 }
+
+pub trait Serializable<T> {
+    fn serialize(&self, out: &mut [u8]) -> Result<usize, Error>;
+}

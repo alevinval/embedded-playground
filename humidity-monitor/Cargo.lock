@@ -633,7 +633,7 @@ name = "humidity"
 version = "0.1.0"
 dependencies = [
  "bleps",
- "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
  "esp-backtrace",
  "esp-hal",
  "esp-println",
@@ -641,7 +641,6 @@ dependencies = [
  "fugit",
  "humidity-core",
  "log",
- "toolbox",
 ]
 
 [[package]]
@@ -1171,10 +1170,6 @@ dependencies = [
  "toml_datetime",
  "winnow 0.6.13",
 ]
-
-[[package]]
-name = "toolbox"
-version = "0.1.0"
 
 [[package]]
 name = "twox-hash"

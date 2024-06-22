@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-toolbox = { path = "../toolbox" }
 humidity-core = { path = "../humidity-core" }
 
 log = "0.4.21"
@@ -29,11 +28,9 @@ esp-hal = { path = "../../esp-hal/esp-hal", features = [
     "embedded-hal-02",
 ] }
 esp-wifi = { path = "../../esp-hal/esp-wifi", features = ["esp32s3", "ble"] }
-embedded-hal = "*"
+embedded-hal = "1"
 
 [profile.dev]
-# Rust debug is too slow.
-# For debug builds always builds with some optimization
 opt-level = 3
 incremental = false
 

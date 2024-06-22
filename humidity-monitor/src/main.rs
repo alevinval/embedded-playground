@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, time::Duration};
-
 use bleps::{
     ad_structure::{
         create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE,
@@ -12,6 +10,7 @@ use bleps::{
     no_rng::NoRng,
     Ble, HciConnector,
 };
+use core::{convert::Infallible, time::Duration};
 use esp_backtrace as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalLine, AdcChannel, AdcConfig, AdcPin, Attenuation},
@@ -28,8 +27,13 @@ use esp_hal::{
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
-use humidity_core::sample::{self, SampleResult};
-use toolbox::format;
+use humidity_core::{
+    historical::Historical,
+    sample::{self, SampleResult},
+};
+
+#[ram(rtc_fast)]
+static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 const HYGROMETER_WARMUP: u32 = MicrosDurationU32::millis(100).to_millis();
@@ -52,11 +56,11 @@ macro_rules! delayed_pulse {
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
-    mut enable_sensor: impl embedded_hal::digital::v2::OutputPin<Error = Infallible>,
+    mut enable_sensor: impl embedded_hal::digital::OutputPin<Error = Infallible>,
     adc1: &mut Adc<ADC1>,
     adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
 ) -> SampleResult {
-    let mut sample_sum = 0 as u32;
+    let mut sample_sum = 0u32;
     let mut sample_min = u16::MAX;
     let mut sample_max = u16::MIN;
 
@@ -108,20 +112,7 @@ fn main() -> ! {
     let sample_result =
         get_samples(&delay, hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
 
-    let beeps = match sample_result.avg {
-        0..=650 => 1,
-        651..=800 => 2,
-        801..=1100 => 3,
-        _ => 10,
-    };
-
-    for _ in 0..beeps {
-        delayed_pulse!(alarm, delay, 10, 150);
-    }
-
-    let mut buf = [0u8; 256];
-    let results = format!(buf, "{},{},{}", sample_result.avg, sample_result.min, sample_result.max);
-    println!("results: '{results}'");
+    unsafe { SAMPLE_HISTORY.store(sample_result) };
 
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
     let init = esp_wifi::initialize(
@@ -133,11 +124,13 @@ fn main() -> ! {
     )
     .unwrap();
 
+    let mut hsync = unsafe { SAMPLE_HISTORY.sync() };
+    let mut read_historical = |_offset: usize, data: &mut [u8]| hsync.write(data).unwrap();
+
     let mut bluetooth = peripherals.BT;
     let connector = BleConnector::new(&init, &mut bluetooth);
     let hci = HciConnector::new(connector, esp_wifi::current_millis);
     let mut ble = Ble::new(&hci);
-
     println!("{:?}", ble.init());
     println!("{:?}", ble.cmd_set_le_advertising_parameters());
     println!(
@@ -153,27 +146,54 @@ fn main() -> ! {
     );
     println!("{:?}", ble.cmd_set_le_advertise_enable(true));
 
-    let mut rf = |_offset: usize, mut data: &mut [u8]| {
-        let mut ser = sample::Serializer::new(&mut data);
+    let mut read_last_sample = |_offset: usize, data: &mut [u8]| {
+        let mut ser = sample::Serializer::new(data);
         ser.serialize(&sample_result).unwrap()
     };
 
     gatt!([service {
-        uuid: "937312e0-2354-11eb-9f10-fbc30a62cf38",
-        characteristics: [characteristic {
-            name: "humidity",
-            uuid: "987312e0-2354-11eb-9f10-fbc30a62cf38",
-            notify: true,
-            read: rf,
-        },],
+        uuid: "937312e0-2354-11eb-9f10-fbc30a62cf00",
+        characteristics: [
+            characteristic {
+                name: "humidity",
+                uuid: "987312e0-2354-11eb-9f10-fbc30a62cf50",
+                read: read_last_sample,
+            },
+            characteristic {
+                name: "historical",
+                uuid: "987312e0-2354-11eb-9f10-fbc30a62cf60",
+                read: read_historical,
+            },
+        ]
     },]);
 
-    let mut rng = NoRng;
-    let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
+    // 5 secs limit to connect
+    let mut connected = false;
+    for _ in 0..50 {
+        match ble.poll() {
+            Some(evt) => match evt {
+                bleps::PollResult::Event(evt) => {
+                    if let bleps::event::EventType::ConnectionComplete { .. } = evt {
+                        connected = true;
+                        break;
+                    }
+                }
+                bleps::PollResult::AsyncData(_) => {}
+            },
+            None => {}
+        }
+        delay.delay_millis(100);
+    }
 
-    for _ in 0..12 {
-        srv.do_work().unwrap();
-        delay.delay_millis(1000);
+    if connected {
+        let mut rng = NoRng;
+        let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
+        loop {
+            match srv.do_work().unwrap() {
+                bleps::attribute_server::WorkResult::DidWork => {}
+                bleps::attribute_server::WorkResult::GotDisconnected => break,
+            }
+        }
     }
 
     pulse!(alarm, delay, 100);
