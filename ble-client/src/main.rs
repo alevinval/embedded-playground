@@ -3,7 +3,7 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use humidity_core::sample;
+use humidity_core::{sample::SampleResult, serde};
 use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
@@ -67,10 +67,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             esp32.disconnect().await?;
             println!("esp32 disconnected, elapsed: {:?}", d.elapsed());
 
-            let mut de = sample::Deserializer::new(&single_read);
-            let sample = de.deserialize().unwrap();
+            let sample = serde::deserialize::<SampleResult>(&single_read).unwrap();
             println!("latest sample: {sample:?} dryness: {}", sample.dryness());
-            println!("fetched historical buffer: {:?}", historical_read);
+            // println!("fetched historical buffer: {:?}", historical_read);
 
             let mut open = OpenOptions::new();
             let mut output = open.write(true).append(true).open("data.csv").await?;

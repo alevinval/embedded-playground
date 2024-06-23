@@ -1,10 +1,4 @@
-pub use de::Deserializer;
-pub use ser::{Error, Serializer};
-
-use crate::serde::{self, Serializable};
-
-mod de;
-mod ser;
+use crate::serde::{self, Deserializable, Serializable};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct SampleResult {
@@ -24,16 +18,33 @@ impl SampleResult {
 }
 
 impl Serializable<SampleResult> for SampleResult {
-    fn serialize(&self, out: &mut [u8]) -> Result<usize, crate::serde::Error> {
-        Serializer::new(out).serialize(&self).map_err(|_| serde::Error::ErrBufferSmall)
+    fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
+        let mut n = ser.write_u16(self.avg)?;
+
+        let max_delta = self.max - self.avg;
+        let min_delta = self.avg - self.min;
+
+        if max_delta > (u8::MAX as u16) || min_delta > u8::MAX as u16 {
+            return Err(serde::Error::Other);
+        }
+
+        n += ser.write_u8((self.avg - self.min) as u8)?;
+        n += ser.write_u8((self.max - self.avg) as u8)?;
+        Ok(n)
+    }
+}
+
+impl Deserializable<Self> for SampleResult {
+    fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
+        let avg = de.read_u16()?;
+        let min_delta = de.read_u8()? as u16;
+        let max_delta = de.read_u8()? as u16;
+        Ok(Self { avg, min: avg - min_delta, max: avg + max_delta })
     }
 }
 
 #[cfg(test)]
 mod test {
-    use de::Deserializer;
-    use ser::Serializer;
-
     use super::*;
 
     #[test]
@@ -41,11 +52,9 @@ mod test {
         let input = SampleResult { avg: 990, min: 813, max: 1238 };
 
         let mut buffer = [0u8; 60];
-        let mut ser = Serializer::new(&mut buffer);
-        let n = ser.serialize(&input).unwrap();
+        let n = serde::serialize(&input, &mut buffer).unwrap();
 
-        let mut sut = Deserializer::new(&buffer[..n]);
-        let output = sut.deserialize().unwrap();
+        let output = serde::deserialize::<SampleResult>(&buffer[..n]).unwrap();
         assert_eq!(input, output);
     }
 }

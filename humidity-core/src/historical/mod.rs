@@ -53,7 +53,7 @@ where
         let elem = &self.elements[self.pos];
         if let Some(elem) = elem {
             self.pos += 1;
-            return elem.serialize(out);
+            return serde::serialize(elem, out);
         }
         Ok(0)
     }

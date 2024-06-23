@@ -27,10 +27,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU32, MicrosDurationU64};
-use humidity_core::{
-    historical::Historical,
-    sample::{self, SampleResult},
-};
+use humidity_core::{historical::Historical, sample::SampleResult, serde};
 
 #[ram(rtc_fast)]
 static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
@@ -146,10 +143,8 @@ fn main() -> ! {
     );
     println!("{:?}", ble.cmd_set_le_advertise_enable(true));
 
-    let mut read_last_sample = |_offset: usize, data: &mut [u8]| {
-        let mut ser = sample::Serializer::new(data);
-        ser.serialize(&sample_result).unwrap()
-    };
+    let mut read_last_sample =
+        |_offset: usize, data: &mut [u8]| serde::serialize(&sample_result, data).unwrap();
 
     gatt!([service {
         uuid: "937312e0-2354-11eb-9f10-fbc30a62cf00",
