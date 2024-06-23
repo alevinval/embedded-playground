@@ -40,5 +40,8 @@ debug = 2
 debug-assertions = false
 incremental = false
 lto = 'fat'
-opt-level = 3
+opt-level = 'z'
 overflow-checks = false
+
+[profile.release.package.esp-wifi]
+opt-level = 3
