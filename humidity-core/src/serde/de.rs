@@ -10,23 +10,23 @@ impl<'input> Deserializer<'input> {
         Self { input, pos: 0 }
     }
 
-    pub fn read_u16(&mut self) -> Result<u16, Error> {
-        let n = 2;
-        if self.input[self.pos..].len() < n {
-            return Err(Error::ErrBufferSmall);
-        }
-        let ans = u16::from_le_bytes([self.input[self.pos], self.input[self.pos + 1]]);
-        self.pos += n;
-        Ok(ans)
+    pub fn read_u8(&mut self) -> Result<u8, Error> {
+        self.read::<1>().map(u8::from_le_bytes)
     }
 
-    pub fn read_u8(&mut self) -> Result<u8, Error> {
-        let n = 1;
-        if self.input[self.pos..].len() < n {
+    pub fn read_u16(&mut self) -> Result<u16, Error> {
+        self.read::<2>().map(u16::from_le_bytes)
+    }
+
+    fn read<const N: usize>(&mut self) -> Result<[u8; N], Error> {
+        let buffer = &self.input[self.pos..];
+        if buffer.len() < N {
             return Err(Error::ErrBufferSmall);
         }
-        let ans = u8::from_le_bytes([self.input[self.pos]]);
-        self.pos += n;
-        Ok(ans)
+
+        self.pos += N;
+        let mut buffer_s: [u8; N] = [0u8; N];
+        buffer_s.copy_from_slice(&buffer[..N]);
+        Ok(buffer_s)
     }
 }

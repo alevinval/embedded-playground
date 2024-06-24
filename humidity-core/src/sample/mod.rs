@@ -20,16 +20,6 @@ impl SampleResult {
 impl Serializable<SampleResult> for SampleResult {
     fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
         let mut n = ser.write_u16(self.avg)?;
-
-        // let max_delta = self.max - self.avg;
-        // let min_delta = self.avg - self.min;
-
-        // if max_delta > (u8::MAX as u16) || min_delta > u8::MAX as u16 {
-        //     return Err(serde::Error::Other);
-        // }
-
-        // n += ser.write_u8((self.avg - self.min) as u8)?;
-        // n += ser.write_u8((self.max - self.avg) as u8)?;
         n += ser.write_u16(self.min)?;
         n += ser.write_u16(self.max)?;
         Ok(n)
@@ -39,9 +29,6 @@ impl Serializable<SampleResult> for SampleResult {
 impl Deserializable<Self> for SampleResult {
     fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
         let avg = de.read_u16()?;
-        // let min_delta = de.read_u8()? as u16;
-        // let max_delta = de.read_u8()? as u16;
-
         let min = de.read_u16()?;
         let max = de.read_u16()?;
         Ok(Self { avg, min, max })

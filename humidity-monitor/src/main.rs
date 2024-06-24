@@ -141,6 +141,25 @@ fn main() -> ! {
     );
     println!("{:?}", ble.cmd_set_le_advertise_enable(true));
 
+    // 5 secs limit to connect
+    let mut connected = false;
+    for _ in 0..50 {
+        match ble.poll() {
+            Some(evt) => match evt {
+                bleps::PollResult::Event(evt) => {
+                    if let bleps::event::EventType::ConnectionComplete { .. } = evt {
+                        connected = true;
+                        break;
+                    }
+                }
+                bleps::PollResult::AsyncData(_) => {}
+            },
+            None => {}
+        }
+        delay.delay_millis(100);
+    }
+    println!("{:?}", ble.cmd_set_le_advertise_enable(false));
+
     let mut read_last_sample =
         |_offset: usize, data: &mut [u8]| serde::serialize(&sample_result, data).unwrap();
 
@@ -159,26 +178,6 @@ fn main() -> ! {
             },
         ]
     },]);
-
-    // 5 secs limit to connect
-    let mut connected = false;
-    for _ in 0..50 {
-        match ble.poll() {
-            Some(evt) => match evt {
-                bleps::PollResult::Event(evt) => {
-                    if let bleps::event::EventType::ConnectionComplete { .. } = evt {
-                        connected = true;
-                        break;
-                    }
-                }
-                bleps::PollResult::AsyncData(_) => {}
-            },
-            None => {}
-        }
-        delay.delay_millis(100);
-    }
-
-    println!("{:?}", ble.cmd_set_le_advertise_enable(false));
 
     if connected {
         let mut rng = NoRng;
