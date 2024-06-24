@@ -34,7 +34,7 @@ use humidity_core::{historical::Historical, sample::SampleResult, serde};
 static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
-const HYGROMETER_SAMPLES: u8 = 64;
+const HYGROMETER_SAMPLES: u8 = u8::MAX;
 
 macro_rules! pulse {
     ($output:ident, $delay:ident, $ms:expr) => {{
