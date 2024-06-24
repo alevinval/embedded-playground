@@ -8,9 +8,9 @@ pub struct SampleResult {
 }
 
 impl SampleResult {
-    const DRY: u16 = 3158;
-    const WATER: u16 = 884;
-    const RANGE: u16 = Self::DRY - Self::WATER;
+    const AIR: u16 = 2053;
+    const WATER: u16 = 220;
+    const RANGE: u16 = Self::AIR - Self::WATER;
 
     pub fn dryness(&self) -> f32 {
         (self.avg - Self::WATER) as f32 / Self::RANGE as f32
