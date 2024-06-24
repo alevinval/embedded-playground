@@ -180,6 +180,8 @@ fn main() -> ! {
         delay.delay_millis(100);
     }
 
+    println!("{:?}", ble.cmd_set_le_advertise_enable(false));
+
     if connected {
         let mut rng = NoRng;
         let mut srv = AttributeServer::new(&mut ble, &mut gatt_attributes, &mut rng);
