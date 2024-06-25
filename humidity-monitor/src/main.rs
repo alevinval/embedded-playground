@@ -89,16 +89,14 @@ fn main() -> ! {
     let mut delay = Delay::new(&clocks);
 
     // Pin definitions
-    let hygrometer_diode_pin = io.pins.gpio5;
-    let mut hygrometer_enable = Output::new(hygrometer_diode_pin, Level::Low);
+    let mut hygrometer_enable = Output::new(io.pins.gpio4, Level::Low);
     hygrometer_enable.set_drive_strength(DriveStrength::I5mA);
-    let mut alarm = Output::new(io.pins.gpio7, Level::Low);
+    let mut alarm = Output::new(io.pins.gpio6, Level::Low);
     alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I5mA);
 
-    let hygrometer_pin = io.pins.gpio6;
     let mut hygrometer_adc_config = AdcConfig::new();
     let mut hygrometer_adc1_pin = hygrometer_adc_config
-        .enable_pin_with_cal::<_, AdcCalLine<ADC1>>(hygrometer_pin, Attenuation::Attenuation11dB);
+        .enable_pin_with_cal::<_, AdcCalLine<ADC1>>(io.pins.gpio5, Attenuation::Attenuation11dB);
     let mut hygrometer_adc1 = Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
