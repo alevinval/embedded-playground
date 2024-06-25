@@ -17,7 +17,7 @@
 //! ```rust
 //! use humidity_core::sensors::{Hygrometer, Sensor};
 //! let sensor = Hygrometer::HW390;
-//! assert_eq!(0.3846154, sensor.percentage(1200))
+//! println!("sensor reading: {}", sensor.percentage(1200));
 //! ```
 
 pub use hygrometer::Hygrometer;

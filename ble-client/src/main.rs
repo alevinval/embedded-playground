@@ -3,7 +3,7 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use humidity_core::{sample::Summary, serde, share};
+use humidity_core::{sample::Summary, serde, shared};
 use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
@@ -25,7 +25,7 @@ async fn find_device(central: &Adapter) -> Option<platform::Peripheral> {
             .unwrap()
             .local_name
             .iter()
-            .any(|name| name.contains(share::BLE_DEVICE_NAME))
+            .any(|name| name.contains(shared::BLE_DEVICE_NAME))
         {
             return Some(p);
         }
@@ -67,16 +67,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             peripheral.disconnect().await?;
             println!("disconnected, elapsed: {:?}", since_connecting.elapsed());
 
-            let sample = serde::deserialize::<Summary>(&single_read).unwrap();
-            println!("latest sample: {sample:?} dryness: {}", sample.dryness());
+            let summary = serde::deserialize::<Summary>(&single_read).unwrap();
+            println!("latest sample: {summary:?} dryness: {}", summary.dryness());
             // println!("fetched historical buffer: {:?}", historical_read);
 
             let mut open = OpenOptions::new();
             let mut output = open.write(true).append(true).open("data.csv").await?;
-            let now = Local::now().format("%Y-%m-%d %H:%M:%s");
+            let now = Local::now().format("%Y-%m-%dT%H:%M:%SZ");
             output
                 .write_all(
-                    format!("{now},{},{},{}\n", sample.avg, sample.min, sample.max).as_bytes(),
+                    format!("{now},{},{},{}\n", summary.avg, summary.min, summary.max).as_bytes(),
                 )
                 .await?;
             continue;

@@ -1,0 +1,4 @@
+[toolchain]
+channel = "nightly"
+components = ["rustfmt", "rustc-src"]
+targets = ["riscv32imac-unknown-none-elf"]

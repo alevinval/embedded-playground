@@ -5,16 +5,16 @@ use bleps::{gatt, no_rng::NoRng, Ble, HciConnector};
 use core::time::Duration;
 use esp_backtrace as _;
 use esp_hal::{
-    analog::adc::{Adc, AdcCalLine, AdcConfig, Attenuation},
+    analog::adc::{Adc, AdcCalCurve, AdcConfig, Attenuation},
     clock::ClockControl,
     delay::Delay,
-    gpio::{DriveStrength, Io, Level, Output},
+    gpio::{Io, Level, Output},
     peripherals::*,
     prelude::*,
     rng::Rng,
     rtc_cntl::{sleep::TimerWakeupSource, Rtc},
     system::SystemControl,
-    timer::timg::TimerGroup,
+    timer::systimer::SystemTimer,
 };
 use esp_println as _;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
@@ -26,12 +26,14 @@ use humidity_core::{
     serde,
 };
 
+mod blessed;
+
 #[ram(rtc_fast)]
 static mut SAMPLE_HISTORY: Historical<128, Summary> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();
-const HYGROMETER_SAMPLES: u8 = u8::MAX;
+const HYGROMETER_SAMPLES: u8 = 255;
 
 macro_rules! pulse {
     ($output:ident, $delay:ident, $ms:expr) => {{
@@ -48,8 +50,6 @@ macro_rules! delayed_pulse {
     }};
 }
 
-mod blessed;
-
 #[entry]
 fn main() -> ! {
     esp_println::logger::init_logger_from_env();
@@ -60,17 +60,14 @@ fn main() -> ! {
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
     let mut rtc = Rtc::new(peripherals.LPWR, None);
-    let mut delay = Delay::new(&clocks);
+    let delay = &mut Delay::new(&clocks);
 
     // Pin definitions
-    let hygrometer_enable = &mut Output::new(io.pins.gpio4, Level::Low);
-    hygrometer_enable.set_drive_strength(DriveStrength::I5mA);
-    let alarm = &mut Output::new(io.pins.gpio6, Level::Low);
-    alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I5mA);
-
+    let mut alarm = Output::new(io.pins.gpio15, Level::Low);
+    let mut hygrometer_enable = Output::new(io.pins.gpio13, Level::Low);
     let mut hygrometer_adc_config = AdcConfig::new();
     let hygrometer_adc1_pin = &mut hygrometer_adc_config
-        .enable_pin_with_cal::<_, AdcCalLine<ADC1>>(io.pins.gpio5, Attenuation::Attenuation11dB);
+        .enable_pin_with_cal::<_, AdcCalCurve<ADC1>>(io.pins.gpio3, Attenuation::Attenuation11dB);
     let hygrometer_adc1 = &mut Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
@@ -82,17 +79,25 @@ fn main() -> ! {
     let mut toggle = || hygrometer_enable.toggle();
     let mut warmup = || delay.delay_millis(HYGROMETER_WARMUP);
     let mut read_adc = || hygrometer_adc1.read_oneshot(hygrometer_adc1_pin).unwrap();
-    let summary = sample::perform_sampling(
-        HYGROMETER_SAMPLES,
-        &mut toggle,
-        &mut warmup,
-        &mut read_adc,
-        Hygrometer::HW390,
-    );
+
+    // loop {
+    //     let summary = sample::perform_sampling(
+    //         255,
+    //         &mut toggle,
+    //         &mut warmup,
+    //         &mut read_adc,
+    //         Hygrometer::HW390,
+    //     );
+    //     println!("avg: {} min: {} max: {}", summary.avg, summary.min, summary.max);
+    //     delay.delay_millis(1000);
+    // }
+
+    let summary =
+        sample::perform_sampling(HYGROMETER_SAMPLES, &mut toggle, &mut warmup, &mut read_adc, Hygrometer::HW390);
 
     unsafe { SAMPLE_HISTORY.store(summary) };
 
-    let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
+    let timer = SystemTimer::new(peripherals.SYSTIMER).alarm0;
     let init = esp_wifi::initialize(
         EspWifiInitFor::Ble,
         timer,
@@ -101,17 +106,15 @@ fn main() -> ! {
         &clocks,
     )
     .unwrap();
-
-    let mut hsync = unsafe { SAMPLE_HISTORY.sync() };
-    let mut read_historical = |_offset: usize, data: &mut [u8]| hsync.write(data).unwrap();
-
     let mut bluetooth = peripherals.BT;
     let connector = BleConnector::new(&init, &mut bluetooth);
     let hci = HciConnector::new(connector, esp_wifi::current_millis);
     let ble = &mut Ble::new(&hci);
 
     blessed::start(ble);
-    if blessed::wait_for_connection(ble, &mut delay) {
+    if blessed::wait_for_connection(ble, delay) {
+        let mut hsync = unsafe { SAMPLE_HISTORY.sync() };
+        let mut read_historical = |_offset: usize, data: &mut [u8]| hsync.write(data).unwrap();
         let mut read_last_sample =
             |_offset: usize, data: &mut [u8]| serde::serialize(&summary, data).unwrap();
 
@@ -132,11 +135,11 @@ fn main() -> ! {
         },]);
 
         let mut rng = NoRng;
-        blessed::work_until_disconnect(ble, &mut gatt_attributes, &mut rng);
+        blessed::work_until_disconnect(ble, &mut gatt_attributes, &mut rng)
     }
 
     pulse!(alarm, delay, 100);
 
     let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
-    rtc.sleep_deep(&[&timer], &mut delay);
+    rtc.sleep_deep(&[&timer], delay);
 }

@@ -18,7 +18,7 @@ impl Sensor for Hygrometer {
     fn low(&self) -> u16 {
         match self {
             Hygrometer::YL69 => 220,
-            Hygrometer::HW390 => 700,
+            Hygrometer::HW390 => 1000,
         }
     }
 
@@ -26,7 +26,7 @@ impl Sensor for Hygrometer {
     fn high(&self) -> u16 {
         match self {
             Hygrometer::YL69 => 2053,
-            Hygrometer::HW390 => 2000,
+            Hygrometer::HW390 => 2050,
         }
     }
 }
@@ -63,7 +63,7 @@ mod test {
     }
 
     #[test_case(Hygrometer::YL69, 1400, 0.6437534)]
-    #[test_case(Hygrometer::HW390, 1400, 0.53846157)]
+    #[test_case(Hygrometer::HW390, 1400, 0.3809524)]
     fn test_percentage(sut: Hygrometer, input: u16, expected: f32) {
         let actual = sut.percentage(input);
         assert_eq!(expected, actual);

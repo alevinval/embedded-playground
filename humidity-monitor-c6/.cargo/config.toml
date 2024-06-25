@@ -1,5 +1,5 @@
-[target.xtensa-esp32s3-none-elf]
-runner = "espflash flash --monitor --baud 40000"
+[target.riscv32imac-unknown-none-elf]
+runner = "espflash flash --monitor"
 
 [env]
 ESP_LOGLEVEL = "INFO"
@@ -7,14 +7,14 @@ ESP_LOGLEVEL = "INFO"
 [build]
 rustflags = [
     "-C",
-    "link-arg=-nostartfiles",
+    "force-frame-pointers",
     "-C",
     "link-arg=-Tlinkall.x",
     "-C",
     "link-arg=-Trom_functions.x",
 ]
 
-target = "xtensa-esp32s3-none-elf"
+target = "riscv32imac-unknown-none-elf"
 
 [unstable]
 build-std = ["core"]

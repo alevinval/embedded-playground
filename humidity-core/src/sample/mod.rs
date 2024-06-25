@@ -27,6 +27,13 @@ pub fn perform_sampling(
 
     toggle_sensor();
     warmup_delay();
+
+    // Trigger 3 warm-up reads.
+    adc_read();
+    adc_read();
+    adc_read();
+
+    // Proceed with sampling.
     for _ in 0..n {
         let sample = adc_read();
         max = max.max(sample);

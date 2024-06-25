@@ -1,5 +1,5 @@
 [package]
-name = "humidity-esp32s3"
+name = "humidity-esp32c6"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,26 +8,27 @@ humidity-core = { path = "../humidity-core" }
 
 log = "0.4.21"
 fugit = "0.3.7"
-
 bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", branch = "main", features = [
     "macros",
+    "async",
 ] }
 
 esp-backtrace = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
-    "esp32s3",
+    "esp32c6",
     "exception-handler",
     "panic-handler",
     "println",
 ] }
 esp-println = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
-    "esp32s3",
+    "esp32c6",
     "log",
 ] }
 esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
-    "esp32s3",
+    "esp32c6",
+    "embedded-hal-02",
 ] }
 esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
-    "esp32s3",
+    "esp32c6",
     "ble",
 ] }
 
