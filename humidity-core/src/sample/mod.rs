@@ -8,8 +8,8 @@ pub struct SampleResult {
 }
 
 impl SampleResult {
-    const AIR: u16 = 2053;
-    const WATER: u16 = 220;
+    const AIR: u16 = 2000;
+    const WATER: u16 = 700;
     const RANGE: u16 = Self::AIR - Self::WATER;
 
     pub fn dryness(&self) -> f32 {
