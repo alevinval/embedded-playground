@@ -1,19 +1,18 @@
 use crate::serde::{self, Deserializable, Serializable};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub mod sensor;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SampleResult {
     pub avg: u16,
     pub min: u16,
     pub max: u16,
+    pub sensor_kind: sensor::SensorKind,
 }
 
 impl SampleResult {
-    const AIR: u16 = 2000;
-    const WATER: u16 = 700;
-    const RANGE: u16 = Self::AIR - Self::WATER;
-
     pub fn dryness(&self) -> f32 {
-        (self.avg - Self::WATER) as f32 / Self::RANGE as f32
+        self.sensor_kind.percent(self.avg)
     }
 }
 
@@ -22,6 +21,7 @@ impl Serializable<SampleResult> for SampleResult {
         let mut n = ser.write_u16(self.avg)?;
         n += ser.write_u16(self.min)?;
         n += ser.write_u16(self.max)?;
+        n += self.sensor_kind.serialize(ser)?;
         Ok(n)
     }
 }
@@ -31,7 +31,8 @@ impl Deserializable<Self> for SampleResult {
         let avg = de.read_u16()?;
         let min = de.read_u16()?;
         let max = de.read_u16()?;
-        Ok(Self { avg, min, max })
+        let sensor_kind = sensor::SensorKind::deserialize(de)?;
+        Ok(Self { avg, min, max, sensor_kind })
     }
 }
 
@@ -41,7 +42,12 @@ mod test {
 
     #[test]
     fn sample_result_serde() {
-        let input = SampleResult { avg: 990, min: 813, max: 1238 };
+        let input = SampleResult {
+            avg: 990,
+            min: 813,
+            max: 1238,
+            sensor_kind: sensor::SensorKind::Resistive,
+        };
 
         let mut buffer = [0u8; 60];
         let n = serde::serialize(&input, &mut buffer).unwrap();

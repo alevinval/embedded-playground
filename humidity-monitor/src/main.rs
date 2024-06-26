@@ -28,13 +28,17 @@ use esp_println as _;
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU64, MillisDurationU32};
-use humidity_core::{historical::Historical, sample::SampleResult, serde};
+use humidity_core::{
+    historical::Historical,
+    sample::{sensor::SensorKind, SampleResult},
+    serde,
+};
 
 #[ram(rtc_fast)]
 static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
-const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(100).to_millis();
+const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();
 const HYGROMETER_SAMPLES: u8 = u8::MAX;
 
 macro_rules! pulse {
@@ -73,7 +77,12 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
     enable_sensor.set_low().unwrap();
 
     let sample_avg = (sample_sum as f32 / HYGROMETER_SAMPLES as f32) as u16;
-    SampleResult { avg: sample_avg, min: sample_min, max: sample_max }
+    SampleResult {
+        avg: sample_avg,
+        min: sample_min,
+        max: sample_max,
+        sensor_kind: SensorKind::Capacitive,
+    }
 }
 
 #[entry]
