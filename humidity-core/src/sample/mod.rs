@@ -1,38 +1,58 @@
-use crate::serde::{self, Deserializable, Serializable};
+//! # Sampling results
+//!
+//! Establish a common ground to work with the results of a sampling operation.
+//! Uses [`SampleResult`] to hold the results of a sampling operation.
+//!
+//! ## TODO
+//!
+//! - For the moment, only works with [`Hygrometer`] as sensor, should be
+//! reworked to work with any [`Sensor`].
 
-pub mod sensor;
+use crate::{
+    sensors::{Hygrometer, Sensor},
+    serde::{self, Deserializable, Serializable},
+};
 
+/// Summarizes the results of a sampling operation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SampleResult {
+    /// Number of samples.
+    pub n: u8,
+    /// Average reading across all samples.
     pub avg: u16,
+    /// Minimum reading across all samples.
     pub min: u16,
+    /// Maximum reading across all samples.
     pub max: u16,
-    pub sensor_kind: sensor::SensorKind,
+    /// Hygrometer model.
+    pub hygrometer: Hygrometer,
 }
 
 impl SampleResult {
     pub fn dryness(&self) -> f32 {
-        self.sensor_kind.percent(self.avg)
+        self.hygrometer.percentage(self.avg)
     }
 }
 
 impl Serializable<SampleResult> for SampleResult {
     fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
-        let mut n = ser.write_u16(self.avg)?;
+        let mut n = ser.write_u8(self.n)?;
+        n += ser.write_u16(self.avg)?;
         n += ser.write_u16(self.min)?;
         n += ser.write_u16(self.max)?;
-        n += self.sensor_kind.serialize(ser)?;
+        n += self.hygrometer.serialize(ser)?;
         Ok(n)
     }
 }
 
 impl Deserializable<Self> for SampleResult {
     fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
+        let n = de.read_u8()?;
         let avg = de.read_u16()?;
         let min = de.read_u16()?;
         let max = de.read_u16()?;
-        let sensor_kind = sensor::SensorKind::deserialize(de)?;
-        Ok(Self { avg, min, max, sensor_kind })
+        let hygrometer = Hygrometer::deserialize(de)?;
+        Ok(Self { n, avg, min, max, hygrometer })
     }
 }
 
@@ -42,12 +62,8 @@ mod test {
 
     #[test]
     fn sample_result_serde() {
-        let input = SampleResult {
-            avg: 990,
-            min: 813,
-            max: 1238,
-            sensor_kind: sensor::SensorKind::Resistive,
-        };
+        let input =
+            SampleResult { n: 1, avg: 990, min: 813, max: 1238, hygrometer: Hygrometer::YL69 };
 
         let mut buffer = [0u8; 60];
         let n = serde::serialize(&input, &mut buffer).unwrap();

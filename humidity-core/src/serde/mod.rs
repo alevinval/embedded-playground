@@ -1,3 +1,5 @@
+//! Serialization and deserialization
+
 pub use de::Deserializer;
 pub use ser::Serializer;
 

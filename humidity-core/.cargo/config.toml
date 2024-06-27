@@ -1,0 +1,2 @@
+[env]
+RUSTDOC_THEME = "ayu"

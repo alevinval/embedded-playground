@@ -28,11 +28,7 @@ use esp_println as _;
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU64, MillisDurationU32};
-use humidity_core::{
-    historical::Historical,
-    sample::{sensor::SensorKind, SampleResult},
-    serde,
-};
+use humidity_core::{historical::Historical, sample::SampleResult, sensors::Hygrometer, serde};
 
 #[ram(rtc_fast)]
 static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
@@ -78,10 +74,11 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
 
     let sample_avg = (sample_sum as f32 / HYGROMETER_SAMPLES as f32) as u16;
     SampleResult {
+        n: HYGROMETER_SAMPLES,
         avg: sample_avg,
         min: sample_min,
         max: sample_max,
-        sensor_kind: SensorKind::Capacitive,
+        hygrometer: Hygrometer::HW390,
     }
 }
 
