@@ -22,7 +22,7 @@ impl<'output> Serializer<'output> {
         if self.out[self.pos..].len() < value.len() {
             return Err(Error::ErrBufferSmall);
         }
-        self.out[self.pos..(self.pos + value.len())].copy_from_slice(&value);
+        self.out[self.pos..(self.pos + value.len())].copy_from_slice(value);
         self.pos += value.len();
         Ok(value.len())
     }

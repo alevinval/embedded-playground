@@ -16,8 +16,8 @@ mod result;
 
 pub fn perform_sampling(
     n: u8,
-    toggle_sensor: &mut impl FnMut() -> (),
-    warmup_delay: &mut impl FnMut() -> (),
+    toggle_sensor: &mut impl FnMut(),
+    warmup_delay: &mut impl FnMut(),
     adc_read: &mut impl FnMut() -> u16,
     hygrometer: Hygrometer,
 ) -> Summary {

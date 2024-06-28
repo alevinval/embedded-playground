@@ -5,6 +5,15 @@ pub struct Historical<const SIZE: usize, T> {
     len: usize,
 }
 
+impl<const SIZE: usize, T> Default for Historical<SIZE, T>
+where
+    T: serde::Serializable<T>,
+ {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const SIZE: usize, T> Historical<SIZE, T>
 where
     T: serde::Serializable<T>,
