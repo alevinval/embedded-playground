@@ -3,7 +3,7 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use humidity_core::{sample::SampleResult, serde, share};
+use humidity_core::{sample::Summary, serde, share};
 use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
@@ -17,7 +17,7 @@ async fn get_central(manager: &Manager) -> Adapter {
     adapters.into_iter().next().unwrap()
 }
 
-async fn find_esp32(central: &Adapter) -> Option<platform::Peripheral> {
+async fn find_device(central: &Adapter) -> Option<platform::Peripheral> {
     for p in central.peripherals().await.unwrap() {
         if api::Peripheral::properties(&p)
             .await
@@ -42,32 +42,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
     central.start_scan(ScanFilter::default()).await.expect("failed starting scan");
 
     loop {
-        let device = find_esp32(&central).await;
-        if let Some(esp32) = device {
-            println!("connecting to esp32s3");
-            let d = Instant::now();
-            esp32.connect().await?;
-            println!("connected to esp32s3");
+        let device = find_device(&central).await;
+        if let Some(peripheral) = device {
+            println!("connecting to {}", peripheral.id());
+            let since_connecting = Instant::now();
+            peripheral.connect().await?;
+            println!("connected");
 
-            let chars = esp32.characteristics();
+            let chars = peripheral.characteristics();
             let cmd_humidity = chars.iter().find(|c| c.uuid == humidity).unwrap();
             let cmd_historical = chars.iter().find(|c| c.uuid == historical).unwrap();
 
-            let single_read = esp32.read(cmd_humidity).await.unwrap();
+            let single_read = peripheral.read(cmd_humidity).await.unwrap();
             // Read historical
             let mut historical_read = Vec::<u8>::new();
             loop {
-                let mut chunk = esp32.read(cmd_historical).await.unwrap();
+                let mut chunk = peripheral.read(cmd_historical).await.unwrap();
                 println!(" => chunk: {:?}", chunk);
                 if chunk.len() == 0 {
                     break;
                 }
                 historical_read.append(&mut chunk);
             }
-            esp32.disconnect().await?;
-            println!("esp32 disconnected, elapsed: {:?}", d.elapsed());
+            peripheral.disconnect().await?;
+            println!("disconnected, elapsed: {:?}", since_connecting.elapsed());
 
-            let sample = serde::deserialize::<SampleResult>(&single_read).unwrap();
+            let sample = serde::deserialize::<Summary>(&single_read).unwrap();
             println!("latest sample: {sample:?} dryness: {}", sample.dryness());
             // println!("fetched historical buffer: {:?}", historical_read);
 

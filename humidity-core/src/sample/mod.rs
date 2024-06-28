@@ -1,74 +1,40 @@
 //! # Sampling results
 //!
 //! Establish a common ground to work with the results of a sampling operation.
-//! Uses [`SampleResult`] to hold the results of a sampling operation.
+//! Uses [`Summary`] to hold the results of a sampling operation.
 //!
 //! ## TODO
 //!
 //! - For the moment, only works with [`Hygrometer`] as sensor, should be
-//! reworked to work with any [`Sensor`].
+//! reworked to work with any [`crate::sensors::Sensor`].
 
-use crate::{
-    sensors::{Hygrometer, Sensor},
-    serde::{self, Deserializable, Serializable},
-};
+pub use result::Summary;
 
-/// Summarizes the results of a sampling operation.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct SampleResult {
-    /// Number of samples.
-    pub n: u8,
-    /// Average reading across all samples.
-    pub avg: u16,
-    /// Minimum reading across all samples.
-    pub min: u16,
-    /// Maximum reading across all samples.
-    pub max: u16,
-    /// Hygrometer model.
-    pub hygrometer: Hygrometer,
-}
+use crate::sensors::Hygrometer;
 
-impl SampleResult {
-    pub fn dryness(&self) -> f32 {
-        self.hygrometer.percentage(self.avg)
+mod result;
+
+pub fn perform_sampling(
+    n: u8,
+    toggle_sensor: &mut impl FnMut() -> (),
+    warmup_delay: &mut impl FnMut() -> (),
+    adc_read: &mut impl FnMut() -> u16,
+    hygrometer: Hygrometer,
+) -> Summary {
+    let mut sum = 0u32;
+    let mut min = u16::MAX;
+    let mut max = u16::MIN;
+
+    toggle_sensor();
+    warmup_delay();
+    for _ in 0..n {
+        let sample = adc_read();
+        max = max.max(sample);
+        min = min.min(sample);
+        sum += sample as u32;
     }
-}
+    toggle_sensor();
 
-impl Serializable<SampleResult> for SampleResult {
-    fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
-        let mut n = ser.write_u8(self.n)?;
-        n += ser.write_u16(self.avg)?;
-        n += ser.write_u16(self.min)?;
-        n += ser.write_u16(self.max)?;
-        n += self.hygrometer.serialize(ser)?;
-        Ok(n)
-    }
-}
-
-impl Deserializable<Self> for SampleResult {
-    fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
-        let n = de.read_u8()?;
-        let avg = de.read_u16()?;
-        let min = de.read_u16()?;
-        let max = de.read_u16()?;
-        let hygrometer = Hygrometer::deserialize(de)?;
-        Ok(Self { n, avg, min, max, hygrometer })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn sample_result_serde() {
-        let input =
-            SampleResult { n: 1, avg: 990, min: 813, max: 1238, hygrometer: Hygrometer::YL69 };
-
-        let mut buffer = [0u8; 60];
-        let n = serde::serialize(&input, &mut buffer).unwrap();
-
-        let output = serde::deserialize::<SampleResult>(&buffer[..n]).unwrap();
-        assert_eq!(input, output);
-    }
+    let avg = (sum as f32 / n as f32) as u16;
+    Summary { n, avg, min, max, hygrometer }
 }

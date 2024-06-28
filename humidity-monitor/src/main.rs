@@ -10,13 +10,13 @@ use bleps::{
     no_rng::NoRng,
     Ble, HciConnector,
 };
-use core::{convert::Infallible, time::Duration};
+use core::time::Duration;
 use esp_backtrace as _;
 use esp_hal::{
-    analog::adc::{Adc, AdcCalLine, AdcChannel, AdcConfig, AdcPin, Attenuation},
+    analog::adc::{Adc, AdcCalLine, AdcConfig, Attenuation},
     clock::ClockControl,
     delay::Delay,
-    gpio::{AnalogPin, DriveStrength, Io, Level, Output},
+    gpio::{DriveStrength, Io, Level, Output},
     peripherals::*,
     prelude::*,
     rng::Rng,
@@ -29,12 +29,15 @@ use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU64, MillisDurationU32};
 use humidity_core::{
-    historical::Historical, sample::SampleResult, sensors::Hygrometer, serde,
+    historical::Historical,
+    sample::{self, Summary},
+    sensors::Hygrometer,
+    serde,
     share::BLE_DEVICE_NAME,
 };
 
 #[ram(rtc_fast)]
-static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
+static mut SAMPLE_HISTORY: Historical<128, Summary> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();
@@ -55,36 +58,6 @@ macro_rules! delayed_pulse {
     }};
 }
 
-fn get_samples<PIN: AnalogPin + AdcChannel>(
-    delay: &Delay,
-    enable_sensor: &mut impl embedded_hal::digital::OutputPin<Error = Infallible>,
-    adc1: &mut Adc<ADC1>,
-    adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
-) -> SampleResult {
-    let mut sample_sum = 0u32;
-    let mut sample_min = u16::MAX;
-    let mut sample_max = u16::MIN;
-
-    enable_sensor.set_high().unwrap();
-    delay.delay_millis(HYGROMETER_WARMUP);
-    for _ in 0..HYGROMETER_SAMPLES {
-        let sample = adc1.read_oneshot(adcpin).unwrap();
-        sample_max = sample_max.max(sample);
-        sample_min = sample_min.min(sample);
-        sample_sum += sample as u32;
-    }
-    enable_sensor.set_low().unwrap();
-
-    let sample_avg = (sample_sum as f32 / HYGROMETER_SAMPLES as f32) as u16;
-    SampleResult {
-        n: HYGROMETER_SAMPLES,
-        avg: sample_avg,
-        min: sample_min,
-        max: sample_max,
-        hygrometer: Hygrometer::HW390,
-    }
-}
-
 #[entry]
 fn main() -> ! {
     esp_println::logger::init_logger_from_env();
@@ -98,15 +71,15 @@ fn main() -> ! {
     let mut delay = Delay::new(&clocks);
 
     // Pin definitions
-    let mut hygrometer_enable = Output::new(io.pins.gpio4, Level::Low);
+    let hygrometer_enable = &mut Output::new(io.pins.gpio4, Level::Low);
     hygrometer_enable.set_drive_strength(DriveStrength::I5mA);
-    let mut alarm = Output::new(io.pins.gpio6, Level::Low);
+    let alarm = &mut Output::new(io.pins.gpio6, Level::Low);
     alarm.set_drive_strength(esp_hal::gpio::DriveStrength::I5mA);
 
     let mut hygrometer_adc_config = AdcConfig::new();
-    let mut hygrometer_adc1_pin = hygrometer_adc_config
+    let hygrometer_adc1_pin = &mut hygrometer_adc_config
         .enable_pin_with_cal::<_, AdcCalLine<ADC1>>(io.pins.gpio5, Attenuation::Attenuation11dB);
-    let mut hygrometer_adc1 = Adc::new(peripherals.ADC1, hygrometer_adc_config);
+    let hygrometer_adc1 = &mut Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
     for _ in 0..5 {
@@ -114,10 +87,18 @@ fn main() -> ! {
         delayed_pulse!(alarm, delay, 10, 25);
     }
 
-    let sample_result =
-        get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
+    let mut toggle = || hygrometer_enable.toggle();
+    let mut warmup = || delay.delay_millis(HYGROMETER_WARMUP);
+    let mut read_adc = || hygrometer_adc1.read_oneshot(hygrometer_adc1_pin).unwrap();
+    let summary = sample::perform_sampling(
+        HYGROMETER_SAMPLES,
+        &mut toggle,
+        &mut warmup,
+        &mut read_adc,
+        Hygrometer::HW390,
+    );
 
-    unsafe { SAMPLE_HISTORY.store(sample_result) };
+    unsafe { SAMPLE_HISTORY.store(summary) };
 
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
     let init = esp_wifi::initialize(
@@ -172,7 +153,7 @@ fn main() -> ! {
     println!("{:?}", ble.cmd_set_le_advertise_enable(false));
 
     let mut read_last_sample =
-        |_offset: usize, data: &mut [u8]| serde::serialize(&sample_result, data).unwrap();
+        |_offset: usize, data: &mut [u8]| serde::serialize(&summary, data).unwrap();
 
     gatt!([service {
         uuid: "937312e0-2354-11eb-9f10-fbc30a62cf00",
