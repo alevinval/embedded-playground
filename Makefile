@@ -15,6 +15,9 @@ check:
 clippy:
 	cd humidity-core && cargo clippy
 
+doc:
+	cargo doc --manifest-path ./humidity-core/Cargo.toml --no-deps --open
+
 run-client:
 	cargo run --manifest-path ./ble-client/Cargo.toml --release
 
