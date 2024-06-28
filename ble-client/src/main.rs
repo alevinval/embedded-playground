@@ -3,7 +3,7 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use humidity_core::{sample::SampleResult, serde};
+use humidity_core::{sample::SampleResult, serde, share};
 use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
@@ -25,7 +25,7 @@ async fn find_esp32(central: &Adapter) -> Option<platform::Peripheral> {
             .unwrap()
             .local_name
             .iter()
-            .any(|name| name.contains("esp32s3"))
+            .any(|name| name.contains(share::BLE_DEVICE_NAME))
         {
             return Some(p);
         }

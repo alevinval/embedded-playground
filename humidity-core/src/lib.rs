@@ -13,3 +13,4 @@ pub mod historical;
 pub mod sample;
 pub mod sensors;
 pub mod serde;
+pub mod share;

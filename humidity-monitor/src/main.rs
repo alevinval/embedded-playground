@@ -28,7 +28,10 @@ use esp_println as _;
 use esp_println::println;
 use esp_wifi::{self, ble::controller::BleConnector, EspWifiInitFor};
 use fugit::{MicrosDurationU64, MillisDurationU32};
-use humidity_core::{historical::Historical, sample::SampleResult, sensors::Hygrometer, serde};
+use humidity_core::{
+    historical::Historical, sample::SampleResult, sensors::Hygrometer, serde,
+    share::BLE_DEVICE_NAME,
+};
 
 #[ram(rtc_fast)]
 static mut SAMPLE_HISTORY: Historical<128, SampleResult> = Historical::new();
@@ -133,6 +136,7 @@ fn main() -> ! {
     let connector = BleConnector::new(&init, &mut bluetooth);
     let hci = HciConnector::new(connector, esp_wifi::current_millis);
     let mut ble = Ble::new(&hci);
+
     println!("{:?}", ble.init());
     println!("{:?}", ble.cmd_set_le_advertising_parameters());
     println!(
@@ -141,7 +145,7 @@ fn main() -> ! {
             create_advertising_data(&[
                 AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
                 AdStructure::ServiceUuids16(&[Uuid::Uuid16(0x1809)]),
-                AdStructure::CompleteLocalName(esp_hal::chip!()),
+                AdStructure::CompleteLocalName(BLE_DEVICE_NAME),
             ])
             .unwrap()
         )
