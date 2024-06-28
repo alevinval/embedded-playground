@@ -1,0 +1,41 @@
+
+name: Docs
+on:
+  workflow_run:
+    workflows:
+      - CI
+    branches:
+      - main
+    types: 
+      - completed
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Generate documentation
+        run: cargo doc --manifest-path ./humidity-core/Cargo.toml --no-deps
+      - name: Add redirect
+        run: echo '<meta http-equiv="refresh" content="0;url=humidity_core/index.html">' > humidity-core/target/doc/index.html
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "humidity-core/target/doc"
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
