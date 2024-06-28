@@ -57,7 +57,7 @@ macro_rules! delayed_pulse {
 
 fn get_samples<PIN: AnalogPin + AdcChannel>(
     delay: &Delay,
-    mut enable_sensor: impl embedded_hal::digital::OutputPin<Error = Infallible>,
+    enable_sensor: &mut impl embedded_hal::digital::OutputPin<Error = Infallible>,
     adc1: &mut Adc<ADC1>,
     adcpin: &mut AdcPin<PIN, ADC1, AdcCalLine<ADC1>>,
 ) -> SampleResult {
@@ -68,7 +68,7 @@ fn get_samples<PIN: AnalogPin + AdcChannel>(
     enable_sensor.set_high().unwrap();
     delay.delay_millis(HYGROMETER_WARMUP);
     for _ in 0..HYGROMETER_SAMPLES {
-        let sample = adc1.read_blocking(adcpin);
+        let sample = adc1.read_oneshot(adcpin).unwrap();
         sample_max = sample_max.max(sample);
         sample_min = sample_min.min(sample);
         sample_sum += sample as u32;
@@ -115,7 +115,7 @@ fn main() -> ! {
     }
 
     let sample_result =
-        get_samples(&delay, hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
+        get_samples(&delay, &mut hygrometer_enable, &mut hygrometer_adc1, &mut hygrometer_adc1_pin);
 
     unsafe { SAMPLE_HISTORY.store(sample_result) };
 
