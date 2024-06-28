@@ -14,3 +14,6 @@ check:
 
 run-client:
 	cargo run --manifest-path ./ble-client/Cargo.toml --release
+
+run-s3:
+	cargo run --manifest-path ./humidity-monitor/Cargo.toml --release
