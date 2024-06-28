@@ -12,6 +12,9 @@ check:
 	cd humidity-monitor && cargo check
 	cd ble-client && cargo check
 
+clippy:
+	cd humidity-core && cargo clippy
+
 run-client:
 	cargo run --manifest-path ./ble-client/Cargo.toml --release
 

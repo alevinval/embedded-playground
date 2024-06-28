@@ -24,7 +24,7 @@ impl Summary {
     }
 }
 
-impl Serializable<Summary> for Summary {
+impl Serializable<Self> for Summary {
     fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
         let mut n = ser.write_u8(self.n)?;
         n += ser.write_u16(self.avg)?;

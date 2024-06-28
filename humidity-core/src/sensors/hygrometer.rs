@@ -32,8 +32,8 @@ impl Sensor for Hygrometer {
 }
 
 impl Serializable<Self> for Hygrometer {
-    fn serialize(&self, se: &mut serde::Serializer) -> Result<usize, serde::Error> {
-        se.write_u8(*self as u8)
+    fn serialize(&self, ser: &mut serde::Serializer) -> Result<usize, serde::Error> {
+        ser.write_u8(*self as u8)
     }
 }
 

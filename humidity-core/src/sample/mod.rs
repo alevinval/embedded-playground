@@ -8,11 +8,11 @@
 //! - For the moment, only works with [`Hygrometer`] as sensor, should be
 //! reworked to work with any [`crate::sensors::Sensor`].
 
-pub use result::Summary;
+pub use summary::Summary;
 
 use crate::sensors::Hygrometer;
 
-mod result;
+mod summary;
 
 pub fn perform_sampling(
     n: u8,

@@ -13,7 +13,7 @@ pub enum Error {
 }
 
 pub trait Serializable<T> {
-    fn serialize(&self, se: &mut Serializer) -> Result<usize, Error>;
+    fn serialize(&self, ser: &mut Serializer) -> Result<usize, Error>;
 }
 
 pub trait Deserializable<T> {
