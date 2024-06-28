@@ -74,7 +74,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "bleps"
 version = "0.1.0"
-source = "git+https://github.com/bjoernQ/bleps?rev=a5148d8ae679e021b78f53fd33afb8bb35d0b62e#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
+source = "git+https://github.com/bjoernQ/bleps?branch=main#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
 dependencies = [
  "bitfield 0.14.0",
  "bleps-dedup",
@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "bleps-dedup"
 version = "0.1.0"
-source = "git+https://github.com/bjoernQ/bleps?rev=a5148d8ae679e021b78f53fd33afb8bb35d0b62e#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
+source = "git+https://github.com/bjoernQ/bleps?branch=main#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
 dependencies = [
  "darling",
  "proc-macro-error",
@@ -102,7 +102,7 @@ dependencies = [
 [[package]]
 name = "bleps-macros"
 version = "0.1.0"
-source = "git+https://github.com/bjoernQ/bleps?rev=a5148d8ae679e021b78f53fd33afb8bb35d0b62e#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
+source = "git+https://github.com/bjoernQ/bleps?branch=main#a5148d8ae679e021b78f53fd33afb8bb35d0b62e"
 dependencies = [
  "litrs 0.2.3",
  "proc-macro2",
@@ -327,6 +327,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 [[package]]
 name = "esp-backtrace"
 version = "0.12.1"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "esp-build",
  "esp-println",
@@ -337,6 +338,7 @@ dependencies = [
 [[package]]
 name = "esp-build"
 version = "0.1.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "quote",
  "syn 2.0.66",
@@ -346,6 +348,7 @@ dependencies = [
 [[package]]
 name = "esp-hal"
 version = "0.18.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "basic-toml",
  "bitfield 0.15.0",
@@ -383,6 +386,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-embassy"
 version = "0.1.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -397,6 +401,7 @@ dependencies = [
 [[package]]
 name = "esp-hal-procmacros"
 version = "0.11.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "darling",
  "document-features",
@@ -412,6 +417,7 @@ dependencies = [
 [[package]]
 name = "esp-metadata"
 version = "0.1.1"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "basic-toml",
  "lazy_static",
@@ -422,6 +428,7 @@ dependencies = [
 [[package]]
 name = "esp-println"
 version = "0.9.1"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "critical-section",
  "esp-build",
@@ -432,6 +439,7 @@ dependencies = [
 [[package]]
 name = "esp-riscv-rt"
 version = "0.8.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "document-features",
  "riscv",
@@ -454,6 +462,7 @@ dependencies = [
 [[package]]
 name = "esp-wifi"
 version = "0.6.0"
+source = "git+https://github.com/esp-rs/esp-hal.git?branch=main#3af45a2ed06540fbf3a908e94284c305bd86e0ea"
 dependencies = [
  "atomic-waker",
  "cfg-if",
