@@ -6,7 +6,7 @@ use core::time::Duration;
 use esp_backtrace as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalCurve, AdcConfig, Attenuation},
-    clock::ClockControl,
+    clock::{ClockControl, CpuClock},
     delay::Delay,
     gpio::{Io, Level, Output},
     peripherals::*,
@@ -56,16 +56,12 @@ fn main() -> ! {
 
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
-
-    // Ideally we would like to run at minimum clock (boot_defaults) but there
-    // appear to be issues with low clock speeds. Like getting stuck without
-    // serial comms to reflash the program, or getting weird readings on the ADC
-    // after a few iterations of deep sleep.
-    let clocks = ClockControl::max(system.clock_control).freeze();
-
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-
     let mut rtc = Rtc::new(peripherals.LPWR, None);
+
+    // Always run `configure`, do not rely on `boot_defaults`, which does
+    // not seem to play with deep sleep.
+    let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock80MHz).freeze();
     let delay = &mut Delay::new(&clocks);
 
     // Pin definitions
@@ -140,11 +136,5 @@ fn main() -> ! {
     pulse!(alarm, delay, 100);
 
     let timer = TimerWakeupSource::new(Duration::from_millis(MEASURE_DELAY));
-
-    // Not sure if this delay is needed, I certainly notice weird behaviours when
-    // going to sleep and waking up. Such as ADC readings working well for the first
-    // two or three cycles, and then suddenly become uncalibrated.
-    delay.delay_millis(1000);
-
     rtc.sleep_deep(&[&timer], delay);
 }
