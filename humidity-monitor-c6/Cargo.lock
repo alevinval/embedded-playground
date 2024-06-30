@@ -629,6 +629,7 @@ name = "humidity-esp32c6"
 version = "0.1.0"
 dependencies = [
  "bleps",
+ "critical-section",
  "esp-backtrace",
  "esp-hal",
  "esp-println",

@@ -2,7 +2,8 @@
 #![no_main]
 
 use bleps::{gatt, no_rng::NoRng, Ble, HciConnector};
-use core::{panic, time::Duration};
+use core::{cell::RefCell, time::Duration};
+use critical_section::Mutex;
 use esp_backtrace as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalCurve, AdcConfig, Attenuation},
@@ -29,7 +30,8 @@ use humidity_core::{
 mod blessed;
 
 #[ram(rtc_fast)]
-static mut SAMPLE_HISTORY: Historical<128, Summary<Hygrometer>> = Historical::new();
+static SAMPLE_HISTORY: Mutex<RefCell<Historical<128, Summary<Hygrometer>>>> =
+    Mutex::new(RefCell::new(Historical::new()));
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();
@@ -93,7 +95,10 @@ fn main() -> ! {
         Hygrometer::HW390,
     );
 
-    unsafe { SAMPLE_HISTORY.store(summary) };
+    critical_section::with(|cs| {
+        let mut history = SAMPLE_HISTORY.borrow_ref_mut(cs);
+        history.store(summary);
+    });
 
     let timer = SystemTimer::new(peripherals.SYSTIMER).alarm0;
     let wifi_init = match esp_wifi::initialize(
@@ -114,15 +119,19 @@ fn main() -> ! {
 
     blessed::start(ble);
     if blessed::wait_for_connection(ble, delay) {
-        let mut hsync = unsafe { SAMPLE_HISTORY.sync() };
+        let mut syncer = critical_section::with(|cs| {
+            let history = SAMPLE_HISTORY.borrow_ref(cs);
+            history.sync()
+        });
 
-        let mut read_historical = |_offset: usize, data: &mut [u8]| match hsync.write(data) {
+        let mut read_historical = |_offset: usize, data: &mut [u8]| match syncer.write(data) {
             Ok(n) => n,
             Err(err) => {
                 log::error!("cannot serialize historical data: {err:?}");
                 0
             }
         };
+
         let mut read_last_sample =
             |_offset: usize, data: &mut [u8]| match serde::serialize(&summary, data) {
                 Ok(n) => n,

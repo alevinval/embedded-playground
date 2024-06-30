@@ -7,7 +7,7 @@ pub struct Historical<const SIZE: usize, T> {
 
 impl<const SIZE: usize, T> Default for Historical<SIZE, T>
 where
-    T: serde::Serializable,
+    T: serde::Serializable + Copy,
 {
     fn default() -> Self {
         Self::new()
@@ -16,7 +16,7 @@ where
 
 impl<const SIZE: usize, T> Historical<SIZE, T>
 where
-    T: serde::Serializable,
+    T: serde::Serializable + Copy,
 {
     const EMPTY: Option<T> = Option::None;
 
@@ -28,7 +28,7 @@ where
         self.elements[self.next()] = Some(elem);
     }
 
-    pub fn sync(&self) -> Syncer<T> {
+    pub fn sync(&self) -> Syncer<SIZE, T> {
         Syncer::new(&self.elements[..self.len])
     }
 
@@ -42,16 +42,20 @@ where
     }
 }
 
-pub struct Syncer<'out, T> {
-    elements: &'out [Option<T>],
+pub struct Syncer<const SIZE: usize, T> {
+    elements: [Option<T>; SIZE],
     pos: usize,
 }
 
-impl<'out, T> Syncer<'out, T>
+impl<const SIZE: usize, T> Syncer<SIZE, T>
 where
-    T: serde::Serializable,
+    T: serde::Serializable + Copy,
 {
-    fn new(elements: &'out [Option<T>]) -> Self {
+    const EMPTY: Option<T> = Option::None;
+
+    fn new(original: &[Option<T>]) -> Self {
+        let mut elements = [Self::EMPTY; SIZE];
+        elements[..original.len()].copy_from_slice(&original[..original.len()]);
         Self { elements, pos: 0 }
     }
 

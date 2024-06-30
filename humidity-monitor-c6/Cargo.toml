@@ -8,6 +8,7 @@ humidity-core = { path = "../humidity-core" }
 
 log = "0.4.21"
 fugit = "0.3.7"
+critical-section = "1.1.2"
 bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", branch = "main", features = [
     "macros",
     "async",
