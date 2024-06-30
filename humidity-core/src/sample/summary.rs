@@ -35,7 +35,7 @@ impl Serializable for Summary {
     }
 }
 
-impl Deserializable<Self> for Summary {
+impl Deserializable for Summary {
     fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
         let n = de.read_u8()?;
         let avg = de.read_u16()?;

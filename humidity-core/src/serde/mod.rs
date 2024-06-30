@@ -19,8 +19,11 @@ where
     fn serialize(&self, ser: &mut Serializer) -> Result<usize, Error>;
 }
 
-pub trait Deserializable<T> {
-    fn deserialize(de: &mut Deserializer) -> Result<T, Error>;
+pub trait Deserializable
+where
+    Self: Sized,
+{
+    fn deserialize(de: &mut Deserializer) -> Result<Self, Error>;
 }
 
 pub fn serialize<T>(value: &T, out: &mut [u8]) -> Result<usize, Error>
@@ -33,7 +36,7 @@ where
 
 pub fn deserialize<T>(out: &[u8]) -> Result<T, Error>
 where
-    T: Deserializable<T>,
+    T: Deserializable,
 {
     let mut de = Deserializer::new(out);
     T::deserialize(&mut de)

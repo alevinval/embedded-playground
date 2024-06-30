@@ -37,7 +37,7 @@ impl Serializable for Hygrometer {
     }
 }
 
-impl Deserializable<Self> for Hygrometer {
+impl Deserializable for Hygrometer {
     fn deserialize(de: &mut serde::Deserializer) -> Result<Self, serde::Error> {
         match de.read_u8()? {
             0 => Ok(Self::YL69),
