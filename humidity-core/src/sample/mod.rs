@@ -42,6 +42,6 @@ pub fn perform_sampling(
     }
     toggle_sensor();
 
-    let avg = (sum as f32 / n as f32) as u16;
+    let avg = sum.div_ceil(n as u32) as u16;
     Summary { n, avg, min, max, hygrometer }
 }
