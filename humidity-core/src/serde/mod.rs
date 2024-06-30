@@ -6,6 +6,7 @@ pub use ser::Serializer;
 mod de;
 mod ser;
 
+// TODO: Implement Display
 #[derive(Debug, PartialEq)]
 pub enum Error {
     ErrBufferSmall,

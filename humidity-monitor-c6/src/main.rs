@@ -2,7 +2,7 @@
 #![no_main]
 
 use bleps::{gatt, no_rng::NoRng, Ble, HciConnector};
-use core::time::Duration;
+use core::{panic, time::Duration};
 use esp_backtrace as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalCurve, AdcConfig, Attenuation},
@@ -80,7 +80,10 @@ fn main() -> ! {
 
     let mut toggle = || hygrometer_enable.toggle();
     let mut warmup = || delay.delay_millis(HYGROMETER_WARMUP);
-    let mut read_adc = || hygrometer_adc1.read_oneshot(hygrometer_adc1_pin).unwrap();
+    let mut read_adc = || match hygrometer_adc1.read_oneshot(hygrometer_adc1_pin) {
+        Ok(sample) => sample,
+        Err(err) => panic!("adc failure: {err:?}"),
+    };
 
     let summary = sample::perform_sampling(
         HYGROMETER_SAMPLES,
@@ -93,25 +96,41 @@ fn main() -> ! {
     unsafe { SAMPLE_HISTORY.store(summary) };
 
     let timer = SystemTimer::new(peripherals.SYSTIMER).alarm0;
-    let init = esp_wifi::initialize(
+    let wifi_init = match esp_wifi::initialize(
         EspWifiInitFor::Ble,
         timer,
         Rng::new(peripherals.RNG),
         peripherals.RADIO_CLK,
         &clocks,
-    )
-    .unwrap();
+    ) {
+        Ok(init) => init,
+        Err(err) => panic!("wifi initialization failure: {err:?}"),
+    };
+
     let mut bluetooth = peripherals.BT;
-    let connector = BleConnector::new(&init, &mut bluetooth);
+    let connector = BleConnector::new(&wifi_init, &mut bluetooth);
     let hci = HciConnector::new(connector, esp_wifi::current_millis);
     let ble = &mut Ble::new(&hci);
 
     blessed::start(ble);
     if blessed::wait_for_connection(ble, delay) {
         let mut hsync = unsafe { SAMPLE_HISTORY.sync() };
-        let mut read_historical = |_offset: usize, data: &mut [u8]| hsync.write(data).unwrap();
+
+        let mut read_historical = |_offset: usize, data: &mut [u8]| match hsync.write(data) {
+            Ok(n) => n,
+            Err(err) => {
+                log::error!("cannot serialize historical data: {err:?}");
+                0
+            }
+        };
         let mut read_last_sample =
-            |_offset: usize, data: &mut [u8]| serde::serialize(&summary, data).unwrap();
+            |_offset: usize, data: &mut [u8]| match serde::serialize(&summary, data) {
+                Ok(n) => n,
+                Err(err) => {
+                    log::error!("cannot serialize last sample: {err:?}");
+                    0
+                }
+            };
 
         gatt!([service {
             uuid: "937312e0-2354-11eb-9f10-fbc30a62cf00",
