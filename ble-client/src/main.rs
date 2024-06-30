@@ -3,7 +3,11 @@ use btleplug::{
     platform::{self, Adapter, Manager},
 };
 use chrono::Local;
-use humidity_core::{sample::Summary, serde, shared};
+use humidity_core::{
+    sample::Summary,
+    sensors::{Hygrometer, Sensor},
+    serde, shared,
+};
 use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
@@ -50,8 +54,8 @@ async fn collect_data(device: impl Peripheral) -> Result<(), Box<dyn Error>> {
     device.disconnect().await?;
     println!("disconnected, elapsed: {:?}", since_connecting.elapsed());
 
-    let summary = serde::deserialize::<Summary>(&single_read).unwrap();
-    println!("latest sample: {summary:?} dryness: {}", summary.dryness());
+    let summary: Summary<Hygrometer> = serde::deserialize(&single_read).unwrap();
+    println!("latest sample: {summary:?} dryness: {}", summary.sensor.percentage(summary.avg));
 
     let mut open = OpenOptions::new();
     let mut output = open.write(true).append(true).open("data.csv").await?;

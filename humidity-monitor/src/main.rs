@@ -27,7 +27,7 @@ use humidity_core::{
 };
 
 #[ram(rtc_fast)]
-static mut SAMPLE_HISTORY: Historical<128, Summary> = Historical::new();
+static mut SAMPLE_HISTORY: Historical<128, Summary<Hygrometer>> = Historical::new();
 
 const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
 const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();

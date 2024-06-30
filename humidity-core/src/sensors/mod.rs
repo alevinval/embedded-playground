@@ -22,12 +22,14 @@
 
 pub use hygrometer::Hygrometer;
 
+use crate::serde;
+
 mod hygrometer;
 
 /// Defines common behaviour for all sensors, such as getting the calibrated low
 /// and high values, and provides a function to compute where a value
 /// fits within the calibrated boundaries.
-pub trait Sensor {
+pub trait Sensor: serde::Serializable + serde::Deserializable {
     /// Returns the calibrated low reading.
     fn low(&self) -> u16;
     /// Returns the calibrated high reading.

@@ -2,25 +2,20 @@
 //!
 //! Establish a common ground to work with the results of a sampling operation.
 //! Uses [`Summary`] to hold the results of a sampling operation.
-//!
-//! ## TODO
-//!
-//! - For the moment, only works with [`Hygrometer`] as sensor, should be
-//! reworked to work with any [`crate::sensors::Sensor`].
 
 pub use summary::Summary;
 
-use crate::sensors::Hygrometer;
+use crate::sensors;
 
 mod summary;
 
-pub fn perform_sampling(
+pub fn perform_sampling<SENSOR: sensors::Sensor>(
     n: u8,
     toggle_sensor: &mut impl FnMut(),
     warmup_delay: &mut impl FnMut(),
     adc_read: &mut impl FnMut() -> u16,
-    hygrometer: Hygrometer,
-) -> Summary {
+    sensor: SENSOR,
+) -> Summary<SENSOR> {
     let mut sum = 0u32;
     let mut min = u16::MAX;
     let mut max = u16::MIN;
@@ -43,5 +38,5 @@ pub fn perform_sampling(
     toggle_sensor();
 
     let avg = sum.div_ceil(n as u32) as u16;
-    Summary { n, avg, min, max, hygrometer }
+    Summary::<SENSOR> { n, avg, min, max, sensor }
 }
