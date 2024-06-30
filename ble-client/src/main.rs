@@ -8,7 +8,7 @@ use std::{error::Error, time::Duration};
 use tokio::{
     fs::OpenOptions,
     io::AsyncWriteExt,
-    time::{sleep, Instant},
+    time::{sleep, timeout, Instant},
 };
 use uuid::Uuid;
 
@@ -33,53 +33,46 @@ async fn find_device(central: &Adapter) -> Option<platform::Peripheral> {
     None
 }
 
+async fn collect_data(device: impl Peripheral) -> Result<(), Box<dyn Error>> {
+    let humidity = Uuid::try_parse("987312e0-2354-11eb-9f10-fbc30a62cf50")?;
+    let _historical = Uuid::try_parse("987312e0-2354-11eb-9f10-fbc30a62cf60")?;
+
+    println!("connecting to {}", device.id());
+    let since_connecting = Instant::now();
+    device.connect().await?;
+    println!("connected");
+
+    let chars = device.characteristics();
+    let cmd_humidity = chars.iter().find(|c| c.uuid == humidity).unwrap();
+    let _cmd_historical = chars.iter().find(|c| c.uuid == _historical).unwrap();
+
+    let single_read = device.read(cmd_humidity).await.unwrap();
+    device.disconnect().await?;
+    println!("disconnected, elapsed: {:?}", since_connecting.elapsed());
+
+    let summary = serde::deserialize::<Summary>(&single_read).unwrap();
+    println!("latest sample: {summary:?} dryness: {}", summary.dryness());
+
+    let mut open = OpenOptions::new();
+    let mut output = open.write(true).append(true).open("data.csv").await?;
+    let now = Local::now().format("%Y-%m-%dT%H:%M:%SZ");
+    output
+        .write_all(format!("{now},{},{},{}\n", summary.avg, summary.min, summary.max).as_bytes())
+        .await?;
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let humidity = Uuid::parse_str("987312e0-2354-11eb-9f10-fbc30a62cf50").unwrap();
-    let historical = Uuid::parse_str("987312e0-2354-11eb-9f10-fbc30a62cf60").unwrap();
     let manager = Manager::new().await?;
     let central = get_central(&manager).await;
     central.start_scan(ScanFilter::default()).await.expect("failed starting scan");
 
     loop {
-        let device = find_device(&central).await;
-        if let Some(peripheral) = device {
-            println!("connecting to {}", peripheral.id());
-            let since_connecting = Instant::now();
-            peripheral.connect().await?;
-            println!("connected");
-
-            let chars = peripheral.characteristics();
-            let cmd_humidity = chars.iter().find(|c| c.uuid == humidity).unwrap();
-            let cmd_historical = chars.iter().find(|c| c.uuid == historical).unwrap();
-
-            let single_read = peripheral.read(cmd_humidity).await.unwrap();
-            // Read historical
-            let mut historical_read = Vec::<u8>::new();
-            loop {
-                let mut chunk = peripheral.read(cmd_historical).await.unwrap();
-                println!(" => chunk: {:?}", chunk);
-                if chunk.len() == 0 {
-                    break;
-                }
-                historical_read.append(&mut chunk);
-            }
-            peripheral.disconnect().await?;
-            println!("disconnected, elapsed: {:?}", since_connecting.elapsed());
-
-            let summary = serde::deserialize::<Summary>(&single_read).unwrap();
-            println!("latest sample: {summary:?} dryness: {}", summary.dryness());
-            // println!("fetched historical buffer: {:?}", historical_read);
-
-            let mut open = OpenOptions::new();
-            let mut output = open.write(true).append(true).open("data.csv").await?;
-            let now = Local::now().format("%Y-%m-%dT%H:%M:%SZ");
-            output
-                .write_all(
-                    format!("{now},{},{},{}\n", summary.avg, summary.min, summary.max).as_bytes(),
-                )
-                .await?;
-            continue;
+        if let Some(device) = find_device(&central).await {
+            let collect_future = collect_data(device);
+            let _ = timeout(Duration::from_secs(10), collect_future).await;
         }
         sleep(Duration::from_secs(1)).await;
     }
