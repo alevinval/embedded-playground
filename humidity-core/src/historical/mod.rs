@@ -7,8 +7,8 @@ pub struct Historical<const SIZE: usize, T> {
 
 impl<const SIZE: usize, T> Default for Historical<SIZE, T>
 where
-    T: serde::Serializable<T>,
- {
+    T: serde::Serializable,
+{
     fn default() -> Self {
         Self::new()
     }
@@ -16,7 +16,7 @@ where
 
 impl<const SIZE: usize, T> Historical<SIZE, T>
 where
-    T: serde::Serializable<T>,
+    T: serde::Serializable,
 {
     const EMPTY: Option<T> = Option::None;
 
@@ -49,7 +49,7 @@ pub struct Syncer<'out, T> {
 
 impl<'out, T> Syncer<'out, T>
 where
-    T: serde::Serializable<T>,
+    T: serde::Serializable,
 {
     fn new(elements: &'out [Option<T>]) -> Self {
         Self { elements, pos: 0 }

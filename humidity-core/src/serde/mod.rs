@@ -12,7 +12,10 @@ pub enum Error {
     Other,
 }
 
-pub trait Serializable<T> {
+pub trait Serializable
+where
+    Self: Sized,
+{
     fn serialize(&self, ser: &mut Serializer) -> Result<usize, Error>;
 }
 
@@ -22,7 +25,7 @@ pub trait Deserializable<T> {
 
 pub fn serialize<T>(value: &T, out: &mut [u8]) -> Result<usize, Error>
 where
-    T: Serializable<T>,
+    T: Serializable,
 {
     let mut se = Serializer::new(out);
     value.serialize(&mut se)
