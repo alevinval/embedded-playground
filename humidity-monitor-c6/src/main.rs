@@ -6,7 +6,7 @@ use core::{panic, time::Duration};
 use esp_backtrace as _;
 use esp_hal::{
     analog::adc::{Adc, AdcCalCurve, AdcConfig, Attenuation},
-    clock::{ClockControl, CpuClock},
+    clock::ClockControl,
     delay::Delay,
     gpio::{Io, Level, Output},
     peripherals::*,
@@ -28,12 +28,12 @@ use humidity_core::{
 
 mod blessed;
 
-#[ram(rtc_fast)]
+#[ram(rtc_fast, zeroed)]
 static mut SAMPLE_HISTORY: Historical<128, Summary<Hygrometer>> = Historical::new();
 
-const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(15).to_millis();
+const MEASURE_DELAY: u64 = MicrosDurationU64::minutes(5).to_millis();
 const HYGROMETER_WARMUP: u32 = MillisDurationU32::millis(1000).to_millis();
-const HYGROMETER_SAMPLES: u8 = 255;
+const HYGROMETER_SAMPLES: u8 = 64;
 
 macro_rules! pulse {
     ($output:ident, $delay:ident, $ms:expr) => {{
@@ -53,24 +53,20 @@ macro_rules! delayed_pulse {
 #[entry]
 fn main() -> ! {
     esp_println::logger::init_logger_from_env();
-
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
+    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let delay = &mut Delay::new(&clocks);
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
     let mut rtc = Rtc::new(peripherals.LPWR, None);
 
-    // Always run `configure`, do not rely on `boot_defaults`, which does
-    // not seem to play with deep sleep.
-    let clocks = ClockControl::configure(system.clock_control, CpuClock::Clock80MHz).freeze();
-    let delay = &mut Delay::new(&clocks);
-
     // Pin definitions
     let mut alarm = Output::new(io.pins.gpio15, Level::Low);
-    let mut hygrometer_enable = Output::new(io.pins.gpio13, Level::Low);
+    let mut hygrometer_enable = Output::new(io.pins.gpio14, Level::Low);
     let mut hygrometer_adc_config = AdcConfig::new();
-    let hygrometer_adc1_pin = &mut hygrometer_adc_config
-        .enable_pin_with_cal::<_, AdcCalCurve<ADC1>>(io.pins.gpio3, Attenuation::Attenuation11dB);
-    let hygrometer_adc1 = &mut Adc::new(peripherals.ADC1, hygrometer_adc_config);
+    let mut hygrometer_adc1_pin = hygrometer_adc_config
+        .enable_pin_with_cal::<_, AdcCalCurve<ADC1>>(io.pins.gpio2, Attenuation::Attenuation11dB);
+    let mut hygrometer_adc1 = Adc::new(peripherals.ADC1, hygrometer_adc_config);
     //
 
     for _ in 0..5 {
@@ -80,7 +76,7 @@ fn main() -> ! {
 
     let mut toggle = || hygrometer_enable.toggle();
     let mut warmup = || delay.delay_millis(HYGROMETER_WARMUP);
-    let mut read_adc = || match hygrometer_adc1.read_oneshot(hygrometer_adc1_pin) {
+    let mut read_adc = || match hygrometer_adc1.read_oneshot(&mut hygrometer_adc1_pin) {
         Ok(sample) => sample,
         Err(err) => panic!("adc failure: {err:?}"),
     };
