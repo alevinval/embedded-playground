@@ -25,7 +25,6 @@ esp-println = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", 
 ] }
 esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
     "esp32c6",
-    "embedded-hal-02",
 ] }
 esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", branch = "main", features = [
     "esp32c6",
